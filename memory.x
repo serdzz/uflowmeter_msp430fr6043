@@ -1,4 +1,7 @@
-/* MSP430FR6043, as far as a 16-bit target can see it.
+/* MSP430FR5043 and FR6043, as far as a 16-bit target can see it.
+ *
+ * One map for both: the two devices are register-identical bar the segment LCD driver, and their
+ * memory maps are the same down to the byte.
  *
  * 64 kB of FRAM, of which 0x6000 to 0xFF7F is reachable with 16-bit addressing -- about 40 kB. The
  * 24 kB above 0x10000 needs the 20-bit addressing Rust's msp430 target does not have.

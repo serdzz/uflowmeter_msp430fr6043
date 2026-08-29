@@ -1,6 +1,18 @@
-# uflowmeter — MSP430FR6043
+# uflowmeter — MSP430FR5043 / FR6043
 
-An ultrasonic water meter, built for a battery. Ping both transducers, work out how much water went
+An ultrasonic water meter, built for a battery.
+
+Builds for either device unchanged. The **FR5043 is the default**: it is the FR6043 without the
+segment LCD driver, which this meter has no use for, in a 64-pin package instead of 80. It costs
+about a third less and, at the time of writing, is the one that can actually be bought — the FR6043
+is out of stock at distributors with a 16-week factory lead time.
+
+```sh
+cargo build --release                                          # FR5043, the default
+cargo build --release --no-default-features -F msp430fr6043    # FR6043
+```
+
+Both come to exactly the same 14 140 bytes: nothing in the firmware touches the difference. Ping both transducers, work out how much water went
 past, add it to a reading in FRAM, switch the analog section off, sleep.
 
 The brief was minimum energy, so that is the axis every decision here is made along, and each one is
@@ -80,8 +92,8 @@ Needs a nightly toolchain and TI's `msp430-elf-gcc`; see `embassy-msp430`'s READ
 from a checkout of [serdzz/embassy](https://github.com/serdzz/embassy) on `dev/msp430`, expected as
 a sibling directory.
 
-Current size: **14 140 bytes of flash and 1 256 of RAM**, against about 40 kB of reachable FRAM and
-4 kB of RAM. Most of the RAM is the sample buffer.
+Current size: **14 140 bytes of flash and 1 256 of RAM**, on either device, against about 40 kB of
+reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer.
 
 ## What has not happened
 

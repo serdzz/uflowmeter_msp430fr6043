@@ -5,8 +5,20 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "Battery ultrasonic water meter on the MSP430FR6043"
 
+[features]
+# The MSP430FR5043 by default: the same ultrasonic device as the FR6043 without the segment LCD
+# driver, which this meter has no use for. It costs about a third less, comes in a 64-pin package
+# instead of 80, and at the time of writing is the one that can actually be bought.
+default = ["msp430fr5043"]
+
+## Build for the MSP430FR5043.
+msp430fr5043 = ["embassy-msp430/msp430fr5043"]
+## Build for the MSP430FR6043 instead. Identical firmware: the two chips differ only in the LCD
+## driver and the package.
+msp430fr6043 = ["embassy-msp430/msp430fr6043"]
+
 [dependencies]
-embassy-msp430 = { path = "../embassy/embassy-msp430", features = ["msp430fr6043", "time-driver-tb0"] }
+embassy-msp430 = { path = "../embassy/embassy-msp430", default-features = false, features = ["time-driver-tb0"] }
 embassy-executor = { path = "../embassy/embassy-executor", features = ["platform-msp430", "executor-thread"] }
 embassy-time = { path = "../embassy/embassy-time", features = ["tick-hz-32_768"] }
 embassy-sync = { path = "../embassy/embassy-sync" }
