@@ -22,6 +22,7 @@ embassy-msp430 = { path = "../embassy/embassy-msp430", default-features = false,
 embassy-executor = { path = "../embassy/embassy-executor", features = ["platform-msp430", "executor-thread"] }
 embassy-time = { path = "../embassy/embassy-time", features = ["tick-hz-32_768"] }
 embassy-sync = { path = "../embassy/embassy-sync" }
+embassy-futures = { path = "../embassy/embassy-futures" }
 
 msp430-rt = "0.4.1"
 panic-msp430 = "0.4.0"

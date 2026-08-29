@@ -171,6 +171,20 @@ pub const fn uss() -> UssConfig {
 /// timescale of a measurement. Once every few minutes is generous.
 pub const HOUSEKEEPING_EVERY: u16 = 128;
 
+/// How long the display stays up after a press, in seconds.
+///
+/// Kept here rather than only in [`crate::display`] so that [`crate::energy`] can price it: this is
+/// the number that decides whether the display is affordable, and it should be next to the other
+/// numbers that decide the same thing.
+pub const DISPLAY_SHOW_SECONDS: u32 = 45;
+
+/// How many times a day somebody is assumed to press the button.
+///
+/// Only used to price the display in [`crate::energy`]. Four is a guess about a household, and the
+/// number is here rather than buried in that module because it is an assumption about people, not
+/// about hardware — the kind that is worth being able to find and argue with.
+pub const DISPLAY_VIEWS_PER_DAY: u32 = 4;
+
 /// Millivolts below which the battery is called low.
 ///
 /// A lithium thionyl chloride cell holds about 3.6 V until it is nearly finished and then falls

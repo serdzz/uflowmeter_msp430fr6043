@@ -46,6 +46,13 @@ const USS_ACTIVE_UA: u32 = 4_000;
 /// capture it enables, which is worth knowing before shortening the capture any further.
 const STARTUP_US: u32 = 1_000;
 
+/// The OLED module while it is showing text, in microamps.
+///
+/// Measured on a 0.96-inch module at 3.3 V, not a datasheet figure: the controller's own numbers
+/// are quoted with no panel attached, and the panel is what the current is. Roughly linear in how
+/// many pixels are lit, so an all-white screen is thirty times this.
+const DISPLAY_UA: u32 = 630;
+
 /// Cycles per multiply-accumulate in the correlation.
 ///
 /// With the software multiply routines linked, a 16 by 16 multiply is a subroutine call and a shift
@@ -65,6 +72,8 @@ pub struct Budget {
     pub front_end_us: u32,
     /// Microseconds the CPU spends correlating.
     pub correlation_us: u32,
+    /// Average current the display costs, in nanoamps, spread over the day.
+    pub display_na: u32,
 }
 
 /// How long one capture takes, in microseconds.
@@ -104,9 +113,14 @@ pub const fn budget(interval_s: u32) -> Budget {
     // The CPU is running for the whole of the front end's time too, plus the correlation.
     let correlation_nc = (ACTIVE_UA * (correlation_us + front_end_us)) / 1_000;
 
+    // The display is priced per day rather than per measurement, because that is how it is used:
+    // a few presses, unrelated to how often the water is measured.
+    let display_seconds_per_day = config::DISPLAY_SHOW_SECONDS * config::DISPLAY_VIEWS_PER_DAY;
+    let display_na = (DISPLAY_UA * display_seconds_per_day * 1000) / 86_400;
+
     // Charge per measurement, spread over the interval, plus what sleeping costs.
     let per_measurement_nc = front_end_nc + correlation_nc;
-    let average_na = SLEEP_NA + per_measurement_nc / interval_s;
+    let average_na = SLEEP_NA + per_measurement_nc / interval_s + display_na;
 
     Budget {
         front_end_nc,
@@ -114,6 +128,7 @@ pub const fn budget(interval_s: u32) -> Budget {
         average_na,
         front_end_us,
         correlation_us,
+        display_na,
     }
 }
 

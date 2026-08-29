@@ -45,6 +45,7 @@
 #![warn(missing_docs)]
 
 use embassy_executor::{LowPowerMode, Spawner, set_low_power_mode};
+use embassy_futures::select::{Either, select};
 use embassy_msp430::uart::Uart;
 use embassy_msp430::uss::Uss;
 
@@ -54,11 +55,13 @@ use panic_msp430 as _;
 
 mod calibration;
 mod config;
+mod display;
 mod energy;
 mod legal;
 mod meter;
 mod supply;
 
+use display::Display;
 use meter::{Meter, Outcome};
 use supply::Monitor;
 
@@ -124,6 +127,11 @@ async fn main(_spawner: Spawner) {
 
     let mut meter = Meter::new(uss, Monitor::new(p.ADC12), params);
 
+    // The display is unpowered until somebody presses the button. See `display` for why switching
+    // its supply, rather than using the controller's sleep command, is the only version of this
+    // that fits the energy budget.
+    let mut display = Display::new(p.P3_4, p.EUSCI_B0, p.P1_7, p.P1_6, p.P2_0);
+
     loop {
         let outcome = meter.measure().await;
 
@@ -140,7 +148,24 @@ async fn main(_spawner: Spawner) {
             }
         }
 
-        meter::sleep(meter.interval()).await;
+        // Wait out the interval, but answer the button if it comes first. Racing the two rather
+        // than running a second task keeps the reading where it is -- owned by the meter -- instead
+        // of needing a lock around it, and the display is the only other thing this instrument
+        // does.
+        //
+        // Whichever wins, the next measurement follows. A press therefore brings one forward by up
+        // to the length of the showing, which is a rare event and a harmless one: the volume is
+        // integrated over the interval that actually elapsed.
+        let reading = meter.totals;
+        let calibrated = meter.params.is_calibrated();
+        match select(
+            embassy_time::Timer::after(meter.interval()),
+            display.serve(&reading, calibrated),
+        )
+        .await
+        {
+            Either::First(()) | Either::Second(()) => {}
+        }
     }
 }
 

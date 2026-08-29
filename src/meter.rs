@@ -18,7 +18,7 @@
 //! single saving in the design.
 
 use embassy_msp430::uss::{tof, Uss};
-use embassy_time::{Duration, Timer};
+use embassy_time::Duration;
 
 use crate::config;
 use crate::legal::flow;
@@ -199,9 +199,4 @@ impl<'d> Meter<'d> {
 
         Outcome::Flowing(f.rate_ul_s)
     }
-}
-
-/// Wait until the next measurement is due.
-pub async fn sleep(interval: Duration) {
-    Timer::after(interval).await;
 }

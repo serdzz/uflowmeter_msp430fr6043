@@ -23,10 +23,10 @@ written down where it is made — `config.rs` for the settings, `energy.rs` for 
 `energy.rs` computes this from the settings, at compile time, so it cannot drift away from what the
 firmware does:
 
-| | Front end | Correlation | Per measurement | Average |
+| | Front end | Correlation | Display | Average |
 | --- | ---: | ---: | ---: | ---: |
-| Water moving, every 2 s | 1 100 µs | 14 000 µs | 16.5 µC | **9.7 µA** |
-| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 16.5 µC | **2.1 µA** |
+| Water moving, every 2 s | 1 100 µs | 14 000 µs | 1.3 µA | **11.1 µA** |
+| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 1.3 µA | **3.4 µA** |
 
 Two things in that table are not what one would guess.
 
@@ -38,6 +38,22 @@ subroutine call. `config::CORRELATION_SAMPLES` is the lever that controls it.
 **The front end's millisecond is nearly all crystal start-up**, not capture. The capture itself is
 100 µs. Shortening the capture further would save almost nothing; what would save something is
 measuring less often, which is what the adaptive interval does.
+
+### The display
+
+An SSD1306 OLED, shown for 45 seconds when the button is pressed and **unpowered the rest of the
+time** — a high-side switch on its supply, not the controller's sleep command. That distinction is
+the whole design: a sleeping SSD1306 module draws about 26 µA, which is more than this meter and
+more than the cell's own self-discharge, so a display that merely slept would be the instrument's
+largest consumer while showing nothing.
+
+At four presses a day it averages 1.3 µA — under what the meter itself draws. Continuously on it
+would be 630 µA, three hundred times the meter.
+
+The hardware has to hold up its half: the I2C pull-ups belong on the *switched* rail, because
+pull-ups above an unpowered chip push current through its protection diodes — a leak invisible on a
+bench supply and fatal to a ten-year battery. The firmware does its half by dropping the I2C driver
+before cutting power, which returns SDA and SCL to GPIO inputs.
 
 ## The number that matters more than any of these
 
@@ -133,8 +149,8 @@ Needs a nightly toolchain and TI's `msp430-elf-gcc`; see `embassy-msp430`'s READ
 from a checkout of [serdzz/embassy](https://github.com/serdzz/embassy) on `dev/msp430`, expected as
 a sibling directory.
 
-Current size: **19 656 bytes of flash and 1 446 of RAM**, on either device, against about 40 kB of
-reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer. About 20 kB of FRAM is left,
+Current size: **25 254 bytes of flash and 1 582 of RAM**, on either device, against about 40 kB of
+reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer. About 15 kB of FRAM is left,
 which is what the radio has to fit into.
 
 ## What has not happened
