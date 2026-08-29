@@ -23,10 +23,10 @@ written down where it is made — `config.rs` for the settings, `energy.rs` for 
 `energy.rs` computes this from the settings, at compile time, so it cannot drift away from what the
 firmware does:
 
-| | Front end | Correlation | Display | Average |
-| --- | ---: | ---: | ---: | ---: |
-| Water moving, every 2 s | 1 100 µs | 14 000 µs | 1.35 µA | **11.1 µA** |
-| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 1.35 µA | **3.4 µA** |
+| | Front end | Correlation | Display | Radio | Average |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Water moving, every 2 s | 1 100 µs | 14 000 µs | 1.35 µA | 2.0 µA | **13.1 µA** |
+| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 1.35 µA | 2.0 µA | **5.4 µA** |
 
 Two things in that table are not what one would guess.
 
@@ -38,6 +38,30 @@ subroutine call. `config::CORRELATION_SAMPLES` is the lever that controls it.
 **The front end's millisecond is nearly all crystal start-up**, not capture. The capture itself is
 100 µs. Shortening the capture further would save almost nothing; what would save something is
 measuring less often, which is what the adaptive interval does.
+
+### The radio
+
+**Wireless M-Bus, mode C1, 868.95 MHz, on a CC1101.** The instrument transmits and never listens.
+
+That is not a limitation, it is what makes a radio affordable at all. Receiving costs 15.6 mA; an
+instrument listening even one per cent of the time would draw 156 µA, ten times everything else here
+put together. A frame is about 30 mA for four milliseconds, which at one a minute averages **2 µA**.
+Between frames the CC1101 sits in `SPWD` at 200 nA — below the meter's own sleep current.
+
+What it rules out is a downlink: no remote configuration, no acknowledgement, no over-the-air
+update. For a meter in a stairwell that is the right trade, and wM-Bus has a mode for exactly it.
+
+C1 rather than the more common T1 because T1 encodes every byte as 3-out-of-6 symbols — a table, an
+encoder, and half again as many bits on air. C1 sends bytes as they are, and the flash the encoder
+would have cost is flash this instrument does not have.
+
+**It is unencrypted, and that is not shippable.** A real deployment runs OMS security profile A or B
+— AES-128 in mode 5 or 7 — and a meter broadcasting its reading in clear is both a privacy problem
+and something no head-end will accept. The device has an AES256 accelerator sitting unused. Wiring
+it up is the next thing this needs, and the key management is the hard part rather than the cipher.
+
+The manufacturer code is a placeholder. A real product needs one allocated by the DLMS User
+Association.
 
 ### The display
 
@@ -175,9 +199,10 @@ Needs a nightly toolchain and TI's `msp430-elf-gcc`; see `embassy-msp430`'s READ
 from a checkout of [serdzz/embassy](https://github.com/serdzz/embassy) on `dev/msp430`, expected as
 a sibling directory.
 
-Current size: **26 066 bytes of flash and 1 542 of RAM**, on either device, against about 40 kB of
-reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer. About 14 kB of FRAM is left,
-which is what the radio has to fit into.
+Current size: **27 916 bytes of flash and 1 558 of RAM**, on either device, against about 40 kB of
+reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer. About 13 kB of FRAM is left —
+which is what the encryption still to come has to fit into, along with whatever the metrology needs
+when it is done properly.
 
 ## What has not happened
 
@@ -189,6 +214,10 @@ None of this has been near a transducer, a pipe, or a battery.
   proportional to the geometry, so this is not a detail.
 * **The burst threshold is a guess.** Run `uss_scope` from the HAL's examples first: it prints the
   captured waveform, which is the only way to choose a threshold, a gain and a capture window.
+* **No frame has been received by anything.** The wM-Bus fields are built from the standard as
+  documented and the CC1101's registers are TI's own values for this air interface, but a wrong
+  word in that table gives a radio transmitting confidently on the wrong frequency, and nothing in
+  the firmware could tell.
 * **Nothing is deposited to compare the image checksum against.** P5 asks for the computed value to
   be checked against a nominal; there is nowhere to have put one yet. That belongs with the
   production step that also seals the parameters.

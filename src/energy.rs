@@ -15,8 +15,8 @@
 //!
 //! # Where it goes
 //!
-//! Run the numbers with the defaults and the shape is not what intuition suggests. The ultrasound
-//! is not the biggest item. The correlation is — because the CPU has no hardware multiply linked
+//! Run the numbers with the defaults and the shape is not what intuition suggests. Neither the
+//! ultrasound nor the radio is the biggest item. The correlation is — because the CPU has no hardware multiply linked
 //! and runs thousands of multiply-accumulates per measurement, for tens of milliseconds, while the
 //! analog front end that does the actual measuring is on for fifty microseconds. That single fact
 //! is why [`crate::config::CORRELATION_SAMPLES`] exists and why it is the first thing to reach for.
@@ -53,6 +53,16 @@ const STARTUP_US: u32 = 1_000;
 /// many pixels are lit, so an all-white screen is thirty times this.
 const DISPLAY_UA: u32 = 630;
 
+/// The CC1101 while transmitting at +10 dBm, in microamps.
+const RADIO_TX_UA: u32 = 30_000;
+
+/// How long a frame takes, in microseconds.
+///
+/// Some thirty bytes at 100 kbps is 2.4 ms on air; the rest is the synthesiser calibrating and the
+/// registers being written, since the radio is configured from scratch every time — it loses them
+/// in power-down, which is where it spends its life.
+const RADIO_FRAME_US: u32 = 4_000;
+
 /// Cycles per multiply-accumulate in the correlation.
 ///
 /// With the software multiply routines linked, a 16 by 16 multiply is a subroutine call and a shift
@@ -74,6 +84,8 @@ pub struct Budget {
     pub correlation_us: u32,
     /// Average current the display costs, in nanoamps, spread over the day.
     pub display_na: u32,
+    /// Average current the radio costs, in nanoamps.
+    pub radio_na: u32,
 }
 
 /// How long one capture takes, in microseconds.
@@ -122,9 +134,13 @@ pub const fn budget(interval_s: u32) -> Budget {
     let display_na = (DISPLAY_UA * display_seconds_per_day * 1000) / 86_400
         + (watched_measurements * (front_end_nc + correlation_nc)) / 86_400;
 
+    // The radio has an interval of its own, unrelated to how often the water is measured.
+    let radio_nc = (RADIO_TX_UA / 1000) * RADIO_FRAME_US;
+    let radio_na = radio_nc / config::BROADCAST_INTERVAL_S as u32;
+
     // Charge per measurement, spread over the interval, plus what sleeping costs.
     let per_measurement_nc = front_end_nc + correlation_nc;
-    let average_na = SLEEP_NA + per_measurement_nc / interval_s + display_na;
+    let average_na = SLEEP_NA + per_measurement_nc / interval_s + display_na + radio_na;
 
     Budget {
         front_end_nc,
@@ -133,6 +149,7 @@ pub const fn budget(interval_s: u32) -> Budget {
         front_end_us,
         correlation_us,
         display_na,
+        radio_na,
     }
 }
 

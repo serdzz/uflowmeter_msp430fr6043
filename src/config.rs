@@ -178,6 +178,14 @@ pub const HOUSEKEEPING_EVERY: u16 = 128;
 /// numbers that decide the same thing.
 pub const DISPLAY_SHOW_SECONDS: u32 = 45;
 
+/// Seconds between radio broadcasts.
+///
+/// A frame is about four milliseconds of 30 mA, so a minute between them averages roughly 2 µA —
+/// affordable, and the same order as the rest of the instrument. Halving this doubles that cost,
+/// which is the whole trade: a collector walking past wants frames often enough to catch one, and
+/// the battery wants them as rarely as the collector will tolerate.
+pub const BROADCAST_INTERVAL_S: u64 = 60;
+
 /// Seconds between measurements while somebody is watching the display.
 ///
 /// Faster than either normal interval, and deliberately: the reason to stand in front of a meter

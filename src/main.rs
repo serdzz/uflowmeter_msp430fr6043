@@ -59,9 +59,11 @@ mod display;
 mod energy;
 mod legal;
 mod meter;
+mod radio;
 mod supply;
 
 use display::Display;
+use radio::Radio;
 use meter::{Meter, Outcome};
 use supply::Monitor;
 
@@ -132,6 +134,11 @@ async fn main(_spawner: Spawner) {
     // that fits the energy budget.
     let mut display = Display::new(p.P3_4, p.EUSCI_B0, p.P1_7, p.P1_6, p.P2_0);
 
+    // The radio transmits and never listens -- see `radio` for why that is the only version of
+    // this an instrument on a battery can have.
+    let mut radio = Radio::new(p.EUSCI_A1, p.P1_0, p.P1_2, p.P1_3, p.P3_5);
+    let mut since_broadcast = embassy_time::Instant::now();
+
     loop {
         let outcome = meter.measure().await;
 
@@ -146,6 +153,27 @@ async fn main(_spawner: Spawner) {
             Outcome::FrontEndFailed => {
                 embassy_time::Timer::after_secs(config::INTERVAL_IDLE_S).await;
             }
+        }
+
+        // Say the reading aloud, at whatever rate the interval asks for. It goes out whether or
+        // not the last measurement worked: a collector needs to hear from the instrument to know
+        // it is alive, and the status byte carries what went wrong.
+        if since_broadcast.elapsed()
+            >= embassy_time::Duration::from_secs(config::BROADCAST_INTERVAL_S)
+        {
+            since_broadcast = embassy_time::Instant::now();
+
+            let mut status = 0u8;
+            if !meter.params.is_calibrated() {
+                status |= radio::wmbus::STATUS_NOT_CALIBRATED;
+            }
+            if meter.health.battery_low {
+                status |= radio::wmbus::STATUS_BATTERY_LOW;
+            }
+            if matches!(outcome, Outcome::NoEcho) {
+                status |= radio::wmbus::STATUS_NO_ECHO;
+            }
+            radio.broadcast(&meter.totals, meter.params.serial, status);
         }
 
         // Wait out the interval, but answer the button if it comes first. Racing the two rather
