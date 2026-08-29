@@ -27,17 +27,7 @@
 //! most, so its cost does not appear in the energy budget. Everything else is arranged to stay
 //! inside 32 bits.
 
-use crate::config;
-
-/// `L² / (2·D)`, in micrometres — the whole of the geometry, folded into one constant.
-///
-/// Worked out at compile time, which on a CPU with no divider is worth doing: what would otherwise
-/// be a division by a constant every measurement becomes a number the compiler already knows.
-const GEOMETRY_UM: u32 = {
-    // In tenths of a millimetre: L² · 50 / D. The hundreds from converting to micrometres cancel
-    // into the 50.
-    (config::PATH_MM10 * config::PATH_MM10 * 50) / config::AXIAL_MM10
-};
+use super::params::Params;
 
 /// A measurement, once the arithmetic has been done.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -56,23 +46,32 @@ pub struct Flow {
 /// ones from the threshold, and coarse is all they need to be: they appear only as a product in the
 /// denominator, where a per-cent error is a per-cent error in the scale factor — which is what
 /// calibration is for — while the same error in `delta_t_ps` would be the whole reading.
-pub fn compute(delta_t_ps: i32, t_up_ns: u32, t_down_ns: u32) -> Option<Flow> {
+pub fn compute(params: &Params, delta_t_ps: i32, t_up_ns: u32, t_down_ns: u32) -> Option<Flow> {
     // A flight time of zero means the burst was found at the very start of the capture, which means
     // it was not really found. Dividing by it would be worse than saying so.
     if t_up_ns == 0 || t_down_ns == 0 {
         return None;
     }
 
+    // The instrument's own asymmetry comes off first. Everything downstream is the flow; this is
+    // not, and leaving it in would make a closed tap read as a steady trickle in whichever
+    // direction the hardware happens to lean.
+    let delta_t_ps = delta_t_ps - params.zero_offset_ps;
+
     let denominator = t_up_ns as i64 * t_down_ns as i64;
-    let numerator = 1_000_000i64 * GEOMETRY_UM as i64 * delta_t_ps as i64;
+    let numerator = 1_000_000i64 * params.geometry_um() as i64 * delta_t_ps as i64;
     let velocity_um_s = (numerator / denominator) as i32;
 
-    let moving = velocity_um_s.unsigned_abs() >= config::ZERO_CUTOFF_UM_S as u32;
+    let moving = velocity_um_s.unsigned_abs() >= crate::config::ZERO_CUTOFF_UM_S as u32;
 
     // A micrometre per second through a square millimetre is a thousandth of a cubic millimetre per
-    // second, so the area multiplies and a thousand divides.
+    // second, so the area multiplies and a thousand divides. The area is in hundredths of a square
+    // millimetre, which puts another hundred under the line.
     let rate_ul_s = if moving {
-        ((velocity_um_s as i64 * config::BORE_AREA_MM2 as i64) / 1000) as i32
+        let raw = (velocity_um_s as i64 * params.bore_area_mm2_100 as i64) / 100_000;
+        // The calibration correction, in parts per million. This is where the flow rig's verdict
+        // lands, and it is applied last so that it corrects everything above it at once.
+        (raw + (raw * params.calibration_ppm as i64) / 1_000_000) as i32
     } else {
         0
     };

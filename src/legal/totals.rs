@@ -128,13 +128,14 @@ impl Totals {
 ///
 /// Two copies, written one after the other, so that a battery pulled mid-write can spoil at most
 /// one.
-const PRIMARY: *mut Totals = 0x6000 as *mut Totals;
+const PRIMARY: *mut Totals = super::fram::TOTALS as *mut Totals;
 /// The fallback. See [`PRIMARY`].
-const SHADOW: *mut Totals = 0x6080 as *mut Totals;
+const SHADOW: *mut Totals = super::fram::TOTALS_SHADOW as *mut Totals;
 
-/// The region is 256 bytes and holds two of these; if the struct ever outgrows that the build
-/// should stop rather than let the copies overlap.
-const _: () = assert!(core::mem::size_of::<Totals>() <= 0x80);
+/// One slot each. The slots interleave with the parameters', so a struct that outgrows its slot
+/// would land on the calibration rather than on its own backup -- which is why this is checked
+/// against `fram::SLOT` and not against the distance to the shadow.
+const _: () = assert!(core::mem::size_of::<Totals>() as u16 <= super::fram::SLOT);
 
 /// Whether a stored copy can be believed.
 fn valid(t: &Totals) -> bool {

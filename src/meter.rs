@@ -21,9 +21,10 @@ use embassy_msp430::uss::{tof, Uss};
 use embassy_time::{Duration, Timer};
 
 use crate::config;
-use crate::flow;
+use crate::legal::flow;
 use crate::supply::{Health, Monitor};
-use crate::totals::{self, Totals};
+use crate::legal::params::Params;
+use crate::legal::totals::{self, Totals};
 
 /// Everything one measurement cycle needs.
 pub struct Meter<'d> {
@@ -33,6 +34,9 @@ pub struct Meter<'d> {
     pub monitor: Monitor<'d>,
     /// The reading.
     pub totals: Totals,
+    /// What this particular instrument was calibrated to. Read once at start-up: they cannot change
+    /// while it is running, because the only path that writes them refuses a sealed instrument.
+    pub params: Params,
     /// The last thing the monitor said.
     pub health: Health,
     /// Consecutive measurements that found no movement.
@@ -55,15 +59,19 @@ pub enum Outcome {
     NoEcho,
     /// The front end itself failed.
     FrontEndFailed,
+    /// The instrument has not been calibrated and sealed, so nothing it measures may be billed
+    /// from. It still counts, so that a bench instrument is useful, but the reading is marked.
+    NotCalibrated,
 }
 
 impl<'d> Meter<'d> {
     /// Build a meter around a front end and a monitor, picking up whatever reading is in FRAM.
-    pub fn new(uss: Uss<'d>, monitor: Monitor<'d>) -> Self {
+    pub fn new(uss: Uss<'d>, monitor: Monitor<'d>, params: Params) -> Self {
         Self {
             uss,
             monitor,
             totals: totals::load(),
+            params,
             health: Health::default(),
             still: 0,
             since_housekeeping: 0,
@@ -91,6 +99,11 @@ impl<'d> Meter<'d> {
 
     /// Run one measurement and fold it into the reading.
     pub async fn measure(&mut self) -> Outcome {
+        // An instrument that has not been calibrated and sealed still measures -- that is what
+        // makes it useful on a bench -- but the outcome says so, every time, so that no reading
+        // from it can be mistaken for one that may be billed from.
+        let uncalibrated = !self.params.is_calibrated();
+
         // The volume this measurement stands for covers the interval that has just elapsed, which
         // is the one the meter was on *before* this reading changes it.
         let seconds = self.interval_seconds();
@@ -123,6 +136,9 @@ impl<'d> Meter<'d> {
             self.health = self.monitor.read().await;
         }
 
+        if uncalibrated {
+            return Outcome::NotCalibrated;
+        }
         outcome
     }
 
@@ -146,7 +162,9 @@ impl<'d> Meter<'d> {
                 up,
                 down,
                 &config,
-                crate::config::BURST_THRESHOLD,
+                // From the instrument's own parameters: the transducers fitted to it decide what
+                // counts as a burst, and that is a per-batch number.
+                self.params.burst_threshold,
                 crate::config::MAX_LAG,
                 crate::config::CORRELATION_SAMPLES,
             ) else {
@@ -161,7 +179,7 @@ impl<'d> Meter<'d> {
             )
         };
 
-        let Some(f) = flow::compute(delta_t_ps, t_up_ns, t_down_ns) else {
+        let Some(f) = flow::compute(&self.params, delta_t_ps, t_up_ns, t_down_ns) else {
             self.still = self.still.saturating_add(1);
             return Outcome::NoEcho;
         };

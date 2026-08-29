@@ -12,7 +12,7 @@ cargo build --release                                          # FR5043, the def
 cargo build --release --no-default-features -F msp430fr6043    # FR6043
 ```
 
-Both come to exactly the same 14 140 bytes: nothing in the firmware touches the difference. Ping both transducers, work out how much water went
+Both come to exactly the same size: nothing in the firmware touches the difference. Ping both transducers, work out how much water went
 past, add it to a reading in FRAM, switch the analog section off, sleep.
 
 The brief was minimum energy, so that is the axis every decision here is made along, and each one is
@@ -47,6 +47,47 @@ is 190 mAh a year, which is an average of **21.7 µA** — ten times what the me
 So the firmware is already an order of magnitude below the point where its own consumption decides
 anything. Further optimisation here buys nothing; what decides how long this meter runs is the cell
 and whatever else is on the board. That is worth knowing before spending a week shaving microamps.
+
+## Legal metrology
+
+This is meant to be sold, which makes it a measuring instrument under **MID 2014/32/EU, annex
+MI-001**, and its software something a notified body assesses against **WELMEC Guide 7.2**. That
+shapes the firmware, and retrofitting it later is expensive, so it is in from the start.
+
+| WELMEC 7.2 | Where |
+| --- | --- |
+| P2, software identification | `legal::identity` — a version and a CRC32 of the image |
+| P5, protection against accidental change | the same checksum, computed by the device's CRC32 hardware at every start-up |
+| P7, parameter protection | `legal::params` — a seal, a write counter that only rises, a checksum |
+| P4, influence via communication interfaces | `calibration` — the production interface does not run on a sealed instrument |
+| S1, software separation | the `legal` module boundary, though separation is **not** claimed |
+
+**The whole software is declared legally relevant.** Proving separation costs more assessment effort
+than this firmware would save. The price is that any change anywhere needs a new version in
+`identity::SOFTWARE_VERSION` and, depending on what changed, another look from the notified body.
+
+### Calibration is data, not code
+
+The change that matters most for a product: the geometry, the zero offset and the correction factor
+are **per instrument**, written on a flow rig into FRAM and sealed. Firmware that hard-codes them
+can be a demonstration; it cannot be a product, because there is nowhere to put what the calibration
+produced.
+
+`zero_offset_ps` is the one to watch. The two directions are never quite symmetric, and that
+asymmetry — not the ultrasound, not the arithmetic — is the largest error in a meter of this kind.
+
+### The production interface
+
+A line-based ASCII protocol on `eUSCI_A0`, served **only while the instrument is unsealed**. Once
+`S` succeeds the firmware never opens the UART again, which answers P4 and the energy question at
+once: an instrument in the field has no listening interface.
+
+```
+I              software version, image checksum, image length
+P              the current parameters
+W <n> <value>  set parameter n          (refused once sealed)
+S              seal. There is no unseal command
+```
 
 ## Where the energy went, in order
 
@@ -92,18 +133,23 @@ Needs a nightly toolchain and TI's `msp430-elf-gcc`; see `embassy-msp430`'s READ
 from a checkout of [serdzz/embassy](https://github.com/serdzz/embassy) on `dev/msp430`, expected as
 a sibling directory.
 
-Current size: **14 140 bytes of flash and 1 256 of RAM**, on either device, against about 40 kB of
-reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer.
+Current size: **19 656 bytes of flash and 1 446 of RAM**, on either device, against about 40 kB of
+reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer. About 20 kB of FRAM is left,
+which is what the radio has to fit into.
 
 ## What has not happened
 
 None of this has been near a transducer, a pipe, or a battery.
 
-* **The geometry in `config.rs` is a placeholder** — a 50 mm path at 45 degrees through a 20 mm
-  bore. It has to come from the meter body the firmware ends up in, and the reading is directly
-  proportional to it.
+* **No instrument has been calibrated.** `legal::params` defaults to nominal geometry — a 50 mm
+  path at 45 degrees through a 20 mm bore — and an instrument holding those is unsealed, reports
+  `NotCalibrated` on every measurement, and must not be billed from. The reading is directly
+  proportional to the geometry, so this is not a detail.
 * **The burst threshold is a guess.** Run `uss_scope` from the HAL's examples first: it prints the
   captured waveform, which is the only way to choose a threshold, a gain and a capture window.
+* **Nothing is deposited to compare the image checksum against.** P5 asks for the computed value to
+  be checked against a nominal; there is nowhere to have put one yet. That belongs with the
+  production step that also seals the parameters.
 * **The time-of-flight estimator is not TI's library** and will not match its accuracy. It has no
   answer for zero-flow drift, which is the error that decides whether a meter is billable. See the
   `uss` module docs.

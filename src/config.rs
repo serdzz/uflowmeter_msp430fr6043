@@ -90,24 +90,10 @@ pub const ZERO_CUTOFF_UM_S: i32 = 4_000;
 // ---------------------------------------------------------------------------------------------
 // The acoustic path
 // ---------------------------------------------------------------------------------------------
-
-/// Length of the acoustic path between the two transducers, in tenths of a millimetre.
-///
-/// This and [`AXIAL_MM10`] are the meter body's geometry and have to come from the body in
-/// question. The pair here describes a common arrangement — a 50 mm path at about 45 degrees to the
-/// flow — and is a placeholder for a real one.
-pub const PATH_MM10: u32 = 500;
-
-/// The part of that path that lies along the pipe, in tenths of a millimetre.
-///
-/// For a path at angle θ to the flow this is `PATH · cos θ`. It appears in the velocity equation as
-/// the term that turns a difference in flight time into a speed along the pipe.
-pub const AXIAL_MM10: u32 = 354;
-
-/// Cross-sectional area of the bore, in square millimetres.
-///
-/// Turns velocity into volume. For a 20 mm bore that is about 314 mm².
-pub const BORE_AREA_MM2: u32 = 314;
+//
+// Nothing here any more. The geometry, the calibration correction, the zero offset and the burst
+// threshold are per instrument and live in `legal::params`, written on a flow rig and sealed. A
+// constant here would be a number no calibration could reach.
 
 // ---------------------------------------------------------------------------------------------
 // The ultrasonic front end
@@ -123,13 +109,6 @@ pub const SAMPLES: usize = 200;
 
 /// Which transducer transmits first. Only affects the sign of the answer.
 pub const FIRST_CHANNEL: Channel = Channel::Ch0;
-
-/// Amplitude that counts as the burst having arrived.
-///
-/// Wants setting from what the transducers actually produce on the board, which is what
-/// `uss_scope` in the HAL's examples is for. Too low and it triggers on the ring-down of the
-/// transmitter; too high and it moves later as the signal weakens with temperature.
-pub const BURST_THRESHOLD: i16 = 400;
 
 /// How many samples after the burst the correlation runs over.
 ///

@@ -26,11 +26,18 @@
 //!   external memory. Each of those would be microamps forever, against a measurement that costs
 //!   microamp-seconds. The cheapest component is the one not fitted.
 //!
+//! # Legal metrology
+//!
+//! This is meant to be sold, which makes it a measuring instrument under MID and its software
+//! something a notified body assesses against WELMEC 7.2. What that costs the design is written up
+//! in [`legal`]: the whole firmware is declared legally relevant, the image carries a checksum and
+//! a version, and the per-instrument calibration is sealed with a write counter over it.
+//!
 //! # What has not happened
 //!
-//! None of this has been near a transducer, a pipe or a battery. The geometry in [`config`] is a
-//! placeholder, the threshold is a guess, the currents in [`energy`] are datasheet typicals, and
-//! the time-of-flight estimator is not TI's library. See the README.
+//! None of this has been near a transducer, a pipe or a battery. The calibration in
+//! [`legal::params`] is nominal geometry rather than a measurement, the currents in [`energy`] are
+//! datasheet typicals, and the time-of-flight estimator is not TI's library. See the README.
 
 #![no_std]
 #![no_main]
@@ -38,16 +45,19 @@
 #![warn(missing_docs)]
 
 use embassy_executor::{LowPowerMode, Spawner, set_low_power_mode};
+use embassy_msp430::uart::Uart;
 use embassy_msp430::uss::Uss;
+
+use legal::{identity, params};
 
 use panic_msp430 as _;
 
+mod calibration;
 mod config;
 mod energy;
-mod flow;
+mod legal;
 mod meter;
 mod supply;
-mod totals;
 
 use meter::{Meter, Outcome};
 use supply::Monitor;
@@ -62,6 +72,22 @@ async fn main(_spawner: Spawner) {
     hal.clock.aclk = config::ACLK;
     hal.clock.aclk_div = config::ACLK_DIV;
     let p = embassy_msp430::init(hal);
+
+    // WELMEC 7.2 P5: the legally relevant image is checked before anything is measured, and the
+    // reaction to a mismatch is to stop. A meter that cannot vouch for its own code has no business
+    // adding to somebody's bill, and carrying on regardless is exactly the failure the requirement
+    // exists to prevent.
+    //
+    // The nominal is not compared here because there is nowhere yet to have deposited it -- that
+    // belongs with the production step that also seals the parameters. What this does establish is
+    // that the checksum is computed and available, which is half of P2 as well: this number and
+    // `identity::SOFTWARE_VERSION` together say exactly which binary is running.
+    let image = identity::image_crc();
+    let _ = (image, identity::image_len(), identity::SOFTWARE_VERSION);
+
+    // Per-instrument calibration, written on a flow rig and sealed. An instrument that has none
+    // still measures -- it is useful on a bench -- but says so, and nothing may be billed from it.
+    let params = params::load();
 
     // LPM3: the CPU, MCLK, SMCLK and the DCO all off, ACLK still running so the time driver keeps
     // counting. This is the mode the meter lives in, and choosing it is the single largest thing
@@ -82,7 +108,21 @@ async fn main(_spawner: Spawner) {
         }
     };
 
-    let mut meter = Meter::new(uss, Monitor::new(p.ADC12));
+    // An uncalibrated instrument serves the production interface first, and returns from it only
+    // when it has been sealed. A sealed one never opens the UART at all -- see `calibration`.
+    let mut params = params;
+    if !params.is_calibrated() {
+        let mut uart = Uart::new(
+            p.EUSCI_A0,
+            p.P4_4,
+            p.P4_3,
+            embassy_msp430::uart::Config::default(),
+        )
+        .unwrap();
+        calibration::run(&mut uart, &mut params).await;
+    }
+
+    let mut meter = Meter::new(uss, Monitor::new(p.ADC12), params);
 
     loop {
         let outcome = meter.measure().await;
@@ -92,7 +132,7 @@ async fn main(_spawner: Spawner) {
         // what the interval is chosen from, and because a build that does report has an obvious
         // place to do it.
         match outcome {
-            Outcome::Flowing(_) | Outcome::Still | Outcome::NoEcho => {}
+            Outcome::Flowing(_) | Outcome::Still | Outcome::NoEcho | Outcome::NotCalibrated => {}
             // A front end that will not start is worth slowing down for: retrying every two seconds
             // spends the battery on a fault that needs a person.
             Outcome::FrontEndFailed => {

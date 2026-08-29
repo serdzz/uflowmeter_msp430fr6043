@@ -22,3 +22,11 @@ MEMORY
   ROM     : ORIGIN = 0x6100, LENGTH = 0x9E80  /* 0x6100 ..= 0xFF7F */
   VECTORS : ORIGIN = 0xFF92, LENGTH = 0x006E  /* 54 interrupt vectors and the reset vector */
 }
+
+/* Bounds of the legally relevant image, for the periodic checksum WELMEC 7.2 P5 requires.
+ *
+ * The end is not a symbol the runtime provides, so it is worked out at run time instead: the
+ * initialisers for .data are the last thing in ROM, and `_sidata` says where they start. See
+ * `legal::identity`.
+ */
+_legal_start = ORIGIN(ROM);
