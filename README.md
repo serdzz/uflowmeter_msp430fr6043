@@ -50,10 +50,31 @@ largest consumer while showing nothing.
 At four presses a day it averages 1.3 µA — under what the meter itself draws. Continuously on it
 would be 630 µA, three hundred times the meter.
 
-The hardware has to hold up its half: the I2C pull-ups belong on the *switched* rail, because
-pull-ups above an unpowered chip push current through its protection diodes — a leak invisible on a
-bench supply and fatal to a ten-year battery. The firmware does its half by dropping the I2C driver
-before cutting power, which returns SDA and SCL to GPIO inputs.
+#### The switch
+
+An **IRLML6401** P-channel MOSFET: source to the 3 V rail, drain to the display, gate to the MCU pin
+with a **1 MΩ pull-up to the rail** beside it. The pin is therefore **low to turn the display on** —
+stated once in `display::Power` so the inversion cannot be read the wrong way round elsewhere.
+
+The pull-up is not optional. Between reset and the firmware's first write that pin is an input, and
+a floating gate leaves the switch in a state nobody has decided.
+
+At 3 V the part is fully on: `VGS(th)` is −0.95 V worst case and `RDS(on)` is 0.085 Ω at −2.5 V,
+which across 630 µA is a drop of fifty nanovolts. On-resistance is simply not a consideration here.
+
+**Leakage is**, and the datasheet does not answer it at 3 V: `IDSS` is quoted as −1.0 µA at −12 V
+and 25 °C, and −25 µA at −9.6 V and 55 °C — both near the part's full rated voltage, where leakage
+is at its worst. At 3 V it will be far lower, but "far lower than a microamp" is not a number, and
+this meter's entire idle draw is 2.1 µA. **Measure it on the board, warm.** It is the one thing
+about this switch that could quietly halve the battery life, and the only symptom would be cells
+coming back early from the field years later.
+
+#### The pull-ups
+
+The I2C pull-ups belong on the *switched* rail. Pull-ups above an unpowered chip push current
+through its protection diodes — a leak invisible on a bench supply and fatal to a ten-year battery.
+The firmware does its half by dropping the I2C driver before cutting power, which returns SDA and
+SCL to GPIO inputs.
 
 ## The number that matters more than any of these
 

@@ -16,9 +16,14 @@
 //!
 //! # What the hardware has to be
 //!
-//! * **A high-side switch on the module's VCC**, driven by [`Display`]'s power pin. Not the GPIO
-//!   alone: the module's peak during initialisation, when the charge pump starts, is well beyond
+//! * **An IRLML6401 as a high-side switch on the module's VCC.** A P-channel MOSFET: source to the
+//!   3 V rail, drain to the display, gate to [`Display`]'s power pin with a 1 MΩ pull-up to the
+//!   rail beside it. Not the GPIO alone: the module's peak while its charge pump starts is beyond
 //!   what an MSP430 pin should source.
+//!
+//!   **The gate pull-up is not optional.** Between reset and this module's first write the pin is
+//!   an input, and a floating gate leaves the switch in a state nobody has decided. The pull-up
+//!   makes that state "off".
 //! * **The I2C pull-ups on the switched rail**, not on the permanent one. Pull-ups above an
 //!   unpowered chip push current through its protection diodes into its own VCC — a leak that is
 //!   invisible on a bench supply and fatal to a ten-year battery.
@@ -26,6 +31,22 @@
 //! The firmware does its half of the same problem: the I2C driver is constructed for the duration
 //! of a showing and dropped afterwards, which returns SDA and SCL to GPIO inputs rather than
 //! leaving the eUSCI driving into an unpowered display.
+//!
+//! # The one parameter to measure
+//!
+//! Not the on-resistance. The IRLML6401 is 0.085 Ω at the gate drive it gets here, which across
+//! 630 µA is a drop of fifty nanovolts — it could be a hundred times worse and nothing would
+//! notice.
+//!
+//! What matters is **leakage while off**, and the datasheet does not answer it at 3 V. `IDSS` is
+//! given as −1.0 µA at −12 V and 25 °C, and −25 µA at −9.6 V and 55 °C. Both are at nearly the
+//! part's full rated voltage, and leakage falls steeply below that, so the figure at 3 V will be
+//! far smaller — but "far smaller" than a microamp is not a number, and this meter's whole idle
+//! draw is 2.1 µA.
+//!
+//! So it wants measuring on the actual board, at the actual rail voltage, warm. It is the one thing
+//! about this switch that could quietly halve the battery life, and the only symptom would be cells
+//! coming back early from the field years later.
 //!
 //! # Two things this is not right for
 //!
@@ -126,8 +147,28 @@ fn glyph(c: u8) -> usize {
 ///
 /// Holds the peripherals rather than a live driver, because the driver only exists while the
 /// display is powered.
+/// The high-side switch.
+///
+/// A type of its own for one reason: the switch is a P-channel MOSFET, so the pin is **low to turn
+/// the display on**. That inversion is exactly the kind of thing that gets written the wrong way
+/// round once and then read as correct forever, so it is stated here and nowhere else, and the rest
+/// of this module says `on()` and `off()`.
+struct Power(Output<'static>);
+
+impl Power {
+    /// Pulling the gate down against the source puts the MOSFET into conduction.
+    fn on(&mut self) {
+        self.0.set_low();
+    }
+
+    /// Gate at the rail: no gate-source voltage, no conduction.
+    fn off(&mut self) {
+        self.0.set_high();
+    }
+}
+
 pub struct Display {
-    power: Output<'static>,
+    power: Power,
     i2c: Peri<'static, EUSCI_B0>,
     scl: Peri<'static, P1_7>,
     sda: Peri<'static, P1_6>,
@@ -144,8 +185,9 @@ impl Display {
         button: Peri<'static, P2_0>,
     ) -> Self {
         Self {
-            // Low: the switch is off and the module is unpowered, which is where it spends its life.
-            power: Output::new(power, Level::Low),
+            // High is off for a P-channel high-side switch, and off is where the display spends
+            // very nearly all of its life.
+            power: Power(Output::new(power, Level::High)),
             i2c,
             scl,
             sda,
@@ -171,7 +213,7 @@ impl Display {
 
     /// Power the display, draw, wait, and power it down again.
     async fn show(&mut self, totals: &Totals, calibrated: bool) {
-        self.power.set_high();
+        self.power.on();
         Timer::after_millis(POWER_SETTLE_MS).await;
 
         // The driver lives only as long as this block. Dropping it puts SDA and SCL back to GPIO
@@ -187,7 +229,7 @@ impl Display {
                 // A display that will not configure is not worth reporting anywhere -- there is
                 // nowhere to report it to. Cut the power and carry on metering.
                 Err(_) => {
-                    self.power.set_low();
+                    self.power.off();
                     return;
                 }
             };
@@ -197,7 +239,7 @@ impl Display {
             }
         }
 
-        self.power.set_low();
+        self.power.off();
     }
 
     /// Send the initialisation sequence and the two lines of text.
