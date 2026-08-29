@@ -178,6 +178,14 @@ pub const HOUSEKEEPING_EVERY: u16 = 128;
 /// numbers that decide the same thing.
 pub const DISPLAY_SHOW_SECONDS: u32 = 45;
 
+/// Seconds between measurements while somebody is watching the display.
+///
+/// Faster than either normal interval, and deliberately: the reason to stand in front of a meter
+/// with nothing running is to see whether the last digits climb, and a reading that only moves
+/// every two seconds is a poor instrument for that. Forty-five seconds of it costs about 34 nA
+/// averaged over a day, which does not register.
+pub const INTERVAL_WATCHED_S: u64 = 1;
+
 /// How many times a day somebody is assumed to press the button.
 ///
 /// Only used to price the display in [`crate::energy`]. Four is a guess about a household, and the

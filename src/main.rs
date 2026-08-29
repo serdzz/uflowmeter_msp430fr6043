@@ -152,19 +152,36 @@ async fn main(_spawner: Spawner) {
         // than running a second task keeps the reading where it is -- owned by the meter -- instead
         // of needing a lock around it, and the display is the only other thing this instrument
         // does.
-        //
-        // Whichever wins, the next measurement follows. A press therefore brings one forward by up
-        // to the length of the showing, which is a rare event and a harmless one: the volume is
-        // integrated over the interval that actually elapsed.
-        let reading = meter.totals;
-        let calibrated = meter.params.is_calibrated();
-        match select(
+        if let Either::Second(()) = select(
             embassy_time::Timer::after(meter.interval()),
-            display.serve(&reading, calibrated),
+            display.wait_for_press(),
         )
         .await
         {
-            Either::First(()) | Either::Second(()) => {}
+            // Somebody is watching. Keep measuring, faster than usual, and redraw after each --
+            // a display frozen on the reading as it was when the button went down would be no use
+            // for the thing people actually stand in front of a meter to do, which is watch the
+            // last digits and see whether anything is running.
+            if let Some(mut session) = display.open().await {
+                while session.is_open() {
+                    meter.measure().await;
+                    if session
+                        .update(&meter.totals, meter.params.is_calibrated())
+                        .await
+                        .is_err()
+                    {
+                        break;
+                    }
+                    // Not the measurement interval: while the display is up the instrument is not
+                    // saving anything by waiting.
+                    embassy_time::Timer::after(
+                        embassy_time::Duration::from_secs(config::INTERVAL_WATCHED_S)
+                            .min(session.remaining()),
+                    )
+                    .await;
+                }
+            }
+            // The session is dropped here, which cuts the display's power.
         }
     }
 }

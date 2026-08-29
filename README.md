@@ -25,8 +25,8 @@ firmware does:
 
 | | Front end | Correlation | Display | Average |
 | --- | ---: | ---: | ---: | ---: |
-| Water moving, every 2 s | 1 100 µs | 14 000 µs | 1.3 µA | **11.1 µA** |
-| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 1.3 µA | **3.4 µA** |
+| Water moving, every 2 s | 1 100 µs | 14 000 µs | 1.35 µA | **11.1 µA** |
+| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 1.35 µA | **3.4 µA** |
 
 Two things in that table are not what one would guess.
 
@@ -47,8 +47,13 @@ the whole design: a sleeping SSD1306 module draws about 26 µA, which is more th
 more than the cell's own self-discharge, so a display that merely slept would be the instrument's
 largest consumer while showing nothing.
 
-At four presses a day it averages 1.3 µA — under what the meter itself draws. Continuously on it
-would be 630 µA, three hundred times the meter.
+While it is up the reading is **live**: the meter keeps measuring — once a second rather than its
+usual interval — and the display is redrawn after each. A frozen snapshot would be no use for the
+thing people actually stand in front of a meter to do, which is watch the last digits with
+everything closed and see whether anything is running.
+
+At four presses a day the display and that faster measuring together average 1.35 µA — under what
+the meter itself draws. Continuously on it would be 630 µA, three hundred times the meter.
 
 #### The switch
 
@@ -170,8 +175,8 @@ Needs a nightly toolchain and TI's `msp430-elf-gcc`; see `embassy-msp430`'s READ
 from a checkout of [serdzz/embassy](https://github.com/serdzz/embassy) on `dev/msp430`, expected as
 a sibling directory.
 
-Current size: **25 254 bytes of flash and 1 582 of RAM**, on either device, against about 40 kB of
-reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer. About 15 kB of FRAM is left,
+Current size: **26 066 bytes of flash and 1 542 of RAM**, on either device, against about 40 kB of
+reachable FRAM and 4 kB of RAM. Most of the RAM is the sample buffer. About 14 kB of FRAM is left,
 which is what the radio has to fit into.
 
 ## What has not happened

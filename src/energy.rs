@@ -114,9 +114,13 @@ pub const fn budget(interval_s: u32) -> Budget {
     let correlation_nc = (ACTIVE_UA * (correlation_us + front_end_us)) / 1_000;
 
     // The display is priced per day rather than per measurement, because that is how it is used:
-    // a few presses, unrelated to how often the water is measured.
+    // a few presses, unrelated to how often the water is measured. The measuring that goes on while
+    // it is up is counted too -- it runs faster than usual then, and paying for it here is what
+    // keeps this budget describing the instrument rather than a simplified version of it.
     let display_seconds_per_day = config::DISPLAY_SHOW_SECONDS * config::DISPLAY_VIEWS_PER_DAY;
-    let display_na = (DISPLAY_UA * display_seconds_per_day * 1000) / 86_400;
+    let watched_measurements = display_seconds_per_day / config::INTERVAL_WATCHED_S as u32;
+    let display_na = (DISPLAY_UA * display_seconds_per_day * 1000) / 86_400
+        + (watched_measurements * (front_end_nc + correlation_nc)) / 86_400;
 
     // Charge per measurement, spread over the interval, plus what sleeping costs.
     let per_measurement_nc = front_end_nc + correlation_nc;

@@ -59,7 +59,7 @@ use embassy_msp430::gpio::{Level, Output, Pull};
 use embassy_msp430::i2c::{Config as I2cConfig, I2c};
 use embassy_msp430::peripherals::{EUSCI_B0, P1_6, P1_7, P2_0};
 use embassy_msp430::Peri;
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Instant, Timer};
 
 use crate::legal::totals::Totals;
 
@@ -195,81 +195,117 @@ impl Display {
         }
     }
 
-    /// Wait for the button, then show `totals` for [`SHOW_FOR`].
+    /// Wait for the button.
     ///
-    /// The waiting is what the meter does almost always, and it costs nothing: the pin's edge
+    /// This is what the instrument does almost always, and it costs nothing: the pin's edge
     /// interrupt wakes the executor out of LPM3.
-    pub async fn serve(&mut self, totals: &Totals, calibrated: bool) {
-        {
-            // Pulled up, so the button shorts it to ground and the press is a falling edge. An
-            // external pull-up would be a permanent leak; the internal one is switched off with
-            // the pin between presses.
-            let mut button = embassy_msp430::gpio::Input::new(self.button.reborrow(), Pull::Up);
-            button.wait_for_falling_edge().await;
-        }
-
-        self.show(totals, calibrated).await;
+    pub async fn wait_for_press(&mut self) {
+        // Pulled up, so the button shorts it to ground and a press is a falling edge. An external
+        // pull-up would be a permanent leak; the internal one goes away with the pin between
+        // presses.
+        let mut button = embassy_msp430::gpio::Input::new(self.button.reborrow(), Pull::Up);
+        button.wait_for_falling_edge().await;
     }
 
-    /// Power the display, draw, wait, and power it down again.
-    async fn show(&mut self, totals: &Totals, calibrated: bool) {
+    /// Power the display up and open a showing.
+    ///
+    /// Returns `None` if the display cannot be configured, having already cut its power again —
+    /// there is nowhere to report that to, and the instrument's business is metering.
+    ///
+    /// The showing ends when the returned [`Session`] is dropped, which cuts the power whatever
+    /// path it is dropped on.
+    pub async fn open(&mut self) -> Option<Session<'_>> {
         self.power.on();
         Timer::after_millis(POWER_SETTLE_MS).await;
 
-        // The driver lives only as long as this block. Dropping it puts SDA and SCL back to GPIO
-        // before the supply is cut, so nothing is left driving an unpowered chip.
-        {
-            let mut i2c = match I2c::new(
-                self.i2c.reborrow(),
-                self.scl.reborrow(),
-                self.sda.reborrow(),
-                I2cConfig::default(),
-            ) {
-                Ok(i2c) => i2c,
-                // A display that will not configure is not worth reporting anywhere -- there is
-                // nowhere to report it to. Cut the power and carry on metering.
-                Err(_) => {
-                    self.power.off();
-                    return;
-                }
-            };
-
-            if Self::draw(&mut i2c, totals, calibrated).await.is_ok() {
-                Timer::after(SHOW_FOR).await;
+        let i2c = match I2c::new(
+            self.i2c.reborrow(),
+            self.scl.reborrow(),
+            self.sda.reborrow(),
+            I2cConfig::default(),
+        ) {
+            Ok(i2c) => i2c,
+            Err(_) => {
+                self.power.off();
+                return None;
             }
-        }
+        };
 
-        self.power.off();
+        let mut session = Session {
+            i2c,
+            power: &mut self.power,
+            until: Instant::now() + SHOW_FOR,
+        };
+
+        if session.start().await.is_err() {
+            // Dropping the session cuts the power.
+            return None;
+        }
+        Some(session)
+    }
+}
+
+/// A showing, from the moment the panel lights to the moment its supply is cut.
+///
+/// The reading is redrawn as often as the caller offers a new one, so that somebody watching the
+/// display sees it move — which is what makes it useful for finding a leak: open nothing, watch the
+/// last digits, and if they climb something is running.
+pub struct Session<'d> {
+    i2c: I2c<'d>,
+    power: &'d mut Power,
+    until: Instant,
+}
+
+impl Session<'_> {
+    /// Whether the showing still has time left.
+    pub fn is_open(&self) -> bool {
+        Instant::now() < self.until
     }
 
-    /// Send the initialisation sequence and the two lines of text.
-    ///
-    /// Free of `self` on purpose: the bus driver handed in already borrows the peripheral this
-    /// display owns, so anything reaching for `self` as well would be a second borrow of it.
-    async fn draw(i2c: &mut I2c<'_>, totals: &Totals, calibrated: bool) -> Result<(), ()> {
+    /// How long is left, for a caller that wants to wait on it.
+    pub fn remaining(&self) -> Duration {
+        self.until.saturating_duration_since(Instant::now())
+    }
+
+    /// Send the initialisation sequence and light the panel.
+    async fn start(&mut self) -> Result<(), ()> {
         let mut init = [0u8; INIT.len() + 1];
         init[0] = COMMANDS;
         init[1..].copy_from_slice(&INIT);
-        i2c.write(ADDRESS, &init).await.map_err(|_| ())?;
-
-        Self::clear(i2c).await?;
-
-        // The reading, as the dial would show it.
-        let mut line = [b' '; 16];
-        let n = format_reading(totals, &mut line);
-        Self::text(i2c, 2, &line[..n]).await?;
-
-        // An uncalibrated instrument says so, in the place a reading would otherwise be trusted
-        // from. It is the same statement `Outcome::NotCalibrated` makes to the radio.
-        if !calibrated {
-            Self::text(i2c, 5, b"Error 0").await?;
-        }
-
-        // Only now is the panel turned on, so the first thing anybody sees is the finished screen
-        // rather than the previous contents of its RAM.
-        i2c.write(ADDRESS, &[COMMANDS, 0xaf]).await.map_err(|_| ())
+        self.i2c.write(ADDRESS, &init).await.map_err(|_| ())?;
+        Display::clear(&mut self.i2c).await?;
+        // Lit only now, so the first thing anybody sees is a blank screen rather than whatever was
+        // left in the controller's RAM.
+        self.i2c.write(ADDRESS, &[COMMANDS, 0xaf]).await.map_err(|_| ())
     }
 
+    /// Redraw with the reading as it stands now.
+    ///
+    /// Only the two lines are rewritten, not the whole panel: a full clear between frames is what
+    /// makes a display flicker, and at this refresh rate it would be visible.
+    pub async fn update(&mut self, totals: &Totals, calibrated: bool) -> Result<(), ()> {
+        let mut line = [b' '; 16];
+        let n = format_reading(totals, &mut line);
+        // Padded to a fixed width so a reading that shortens does not leave the old digits behind.
+        Display::text(&mut self.i2c, 2, &line[..n.max(11)]).await?;
+
+        if !calibrated {
+            Display::text(&mut self.i2c, 5, b"Error 0").await?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for Session<'_> {
+    fn drop(&mut self) {
+        // Whatever ended the showing -- time, an error, or the caller simply letting it go -- the
+        // supply is cut. The I2C driver is dropped first, by field order, which puts SDA and SCL
+        // back to GPIO before the display loses power.
+        self.power.off();
+    }
+}
+
+impl Display {
     /// Blank every page.
     async fn clear(i2c: &mut I2c<'_>) -> Result<(), ()> {
         let blank = [0u8; 33];
