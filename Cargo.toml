@@ -1,0 +1,33 @@
+[package]
+name = "uflowmeter"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Battery ultrasonic water meter on the MSP430FR6043"
+
+[dependencies]
+embassy-msp430 = { path = "../embassy/embassy-msp430", features = ["msp430fr6043", "time-driver-tb0"] }
+embassy-executor = { path = "../embassy/embassy-executor", features = ["platform-msp430", "executor-thread"] }
+embassy-time = { path = "../embassy/embassy-time", features = ["tick-hz-32_768"] }
+embassy-sync = { path = "../embassy/embassy-sync" }
+
+msp430-rt = "0.4.1"
+panic-msp430 = "0.4.0"
+critical-section = "1.1"
+
+[profile.dev]
+codegen-units = 1
+debug = 2
+# About 40 kB of the FRAM is reachable. Never build this unoptimized.
+opt-level = "s"
+overflow-checks = false
+
+[profile.release]
+codegen-units = 1
+debug = 2
+lto = true
+# Size, not speed: this spends almost all its time asleep, and the flash ceiling is the real
+# constraint. Where speed matters -- the correlation -- it is bounded by how many samples there
+# are, not by how tightly the loop is compiled.
+opt-level = "z"
+overflow-checks = false
