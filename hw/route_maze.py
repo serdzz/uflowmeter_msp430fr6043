@@ -13,8 +13,11 @@ GRID  = 0.1                      # mm per cell
 # the class clearance -- and the margin above that has to stay small: the keep-out is painted as
 # a rectangle, so on a 0.5 mm pitch QFN too much of it closes the one way out of a pin, which is
 # straight outward along the pin's own axis.
-CLR   = 0.30
-W     = MM(0.25)
+CLR   = 0.29
+# 0.15 mm, not 0.25. On a 0.5 mm pitch QFN the neighbouring pads sit 0.35 mm from the pin's own
+# axis, so a 0.25 mm track -- which needs 0.275 mm of room from its centre -- cannot leave the pin
+# at all; the keep-outs meet over the escape corridor and close it. At 0.15 mm the corridor opens.
+W     = MM(0.15)
 VIA_D, DRILL = MM(0.6), MM(0.3)
 VIA_COST = 24                    # in cells: a via is worth about 5 mm of track
 SKIP  = {'RF_P','RF_N','RFA','RFB','RFC','RFD','RFE','ANT','RF_SHUNT','GND','VCC'}

@@ -27,7 +27,27 @@ here so the board can be rebuilt: [`route_maze.py`](route_maze.py) then
 | RF | 0.30 mm | `RF_P`, `RF_N`, `RFA`…`RFE`, `ANT`, `RF_SHUNT` |
 | Power | 0.50 mm | `VCC`, `GND`, `RADIO_VDD`, `VCC_DISP`, `BAT+` |
 | Ultrasonic | 0.25 mm | `USSXTIN`, `USSXTOUT`, `CH0`, `CH1` |
-| Default | 0.20 mm | everything else |
+| **Default** | **0.15 mm** | everything else |
+
+### Why the default track is 0.15 mm and not 0.25
+
+Because at 0.25 mm nothing can leave a QFN pin at all, and it takes a picture of the grid to see
+why. Around `U1` pin 25, with a 0.25 mm track's keep-out painted:
+
+```
+y301-309   4X5555X OOOO X5555555     the pin, flanked by its neighbours
+y310-312   XXXXXXXXXXXXXX55555       a solid band, claimed by two nets at once
+y313+      ...................       open board
+```
+
+`O` is the pin, `5` a neighbour, `X` a cell two nets both need and neither may have. The neighbours
+sit 0.5 mm away and are 0.3 mm wide, so their copper edge is 0.35 mm from this pin's axis. A
+0.25 mm track needs 0.275 mm of room from its centreline; add the clearance both sides and the two
+keep-outs meet over the escape corridor and close it.
+
+At 0.15 mm the track needs 0.225 mm, the keep-outs stop short of each other, and the corridor
+opens. This is why fine-pitch escapes are routed thin and then widened once clear of the package —
+and it is worth doing that widening by hand on the power-carrying runs.
 
 Clearance is 0.15 mm on every class, which is not laziness: a 0.5 mm pitch QFN has only 0.25 mm
 between its own pads, so a wider clearance makes DRC flag the packages themselves.
