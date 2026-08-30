@@ -132,7 +132,7 @@ async fn main(_spawner: Spawner) {
     // The display is unpowered until somebody presses the button. See `display` for why switching
     // its supply, rather than using the controller's sleep command, is the only version of this
     // that fits the energy budget.
-    let mut display = Display::new(p.P3_4, p.EUSCI_B0, p.P1_7, p.P1_6, p.P2_0);
+    let mut display = Display::new(p.P3_4, p.EUSCI_B0, p.P1_7, p.P1_6, p.P1_4);
 
     // The radio transmits and never listens -- see `radio` for why that is the only version of
     // this an instrument on a battery can have.

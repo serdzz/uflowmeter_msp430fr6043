@@ -73,11 +73,23 @@ Load capacitor values follow each crystal's C\_L, not a habit — see `LAYOUT.md
 | SO (GDO1) | `SPI_MISO` | P1.3 — RGC64 pin 20 |
 | SCLK | `SPI_SCK` | P1.0 — RGC64 pin 3 |
 | CSn | `RADIO_CS` | P3.5 — RGC64 pin 52 |
-| XOSC_Q1/Q2 | Y3 26 MHz + C11, C12 | |
-| AVDD ×3, DVDD | `VCC` | C13–C16 100 n `0402` each |
+| XOSC_Q1/Q2 | Y3 26 MHz + **C11 = 12 pF, C12 = 15 pF** | |
+| **RBIAS (17)** | **R5 = 56 kΩ to `GND`** | |
+| AVDD ×4, DVDD | `VCC` through **L2, ferrite bead 1 kΩ @ 100 MHz** | C13–C16 100 n `0402`, one per pin |
 | DCOUPL | `RADIO_DCOUPL` | C17 100 n to `GND` |
-| RF_P, RF_N | filter balun → J2 | |
+| DGUARD | `GND` | |
+| RF_P, RF_N | filter balun → J2 | see [`RF.md`](RF.md) |
 | GDO0, GDO2 | not connected | |
+
+Three of these came out of TI's reference design and were absent from the first draft. Each would
+have cost a board spin on its own:
+
+* **R5, the `RBIAS` resistor**, sets the radio's internal bias current. Without it nothing
+  transmits.
+* **The crystal load capacitors are not a matched pair** — 12 pF and 15 pF. Fitting two of the same
+  value is the obvious thing and is not what TI specifies.
+* **L2, the ferrite bead in the supply feed**, keeps the radio's switching out of the rest of the
+  board — which on this board includes an analog front end measuring picoseconds.
 
 `GDO0` and `GDO2` are left unconnected on purpose: the firmware polls `MARCSTATE` over SPI rather
 than watching a pin, because a frame is four milliseconds and the CPU has nothing else to do in
@@ -174,12 +186,30 @@ Its own power domain. Do not merge it into `AVCC`.
 | `CH0_IN` | 60 | J4 pin 2 — transducer A echo |
 | `CH1_OUT` | 54 | J4 pin 3 — transducer B drive |
 | `CH1_IN` | 53 | J4 pin 4 — transducer B echo |
-| `PVCC` | 56, 57 | `VCC` through C20 100 n at each pin |
+| `PVCC` | 56, 57 | `VCC`, with C20 and C21 100 n `0402` one at each pin |
 | `PVSS` | 55, 58 | star ground, on its own return |
 | `USSXTIN` | 62 | Y2 |
 | `USSXTOUT` | 63 | Y2 |
 
-* **J4** — 4-pin 2.54 mm to the two 1 MHz transducers.
+### How little there is to it
+
+The front end is integrated to an unusual degree, which is the reason to choose this part at all.
+`SAPH_A` drives the transducer, and it also owns the bias switches and the input multiplexer — so
+the excitation bias and the amplifier bias are generated on-chip and switched by the sequencer,
+without the CPU and without external components. The firmware sets them as numbers
+(`excitation_bias`, `pga_bias` in `config.rs`), not as resistors.
+
+So each channel is one node: `CHx_OUT` drives the transducer and `CHx_IN` listens to the same
+terminal, with the transducer's other terminal at `PVSS`. Ten excitation pulses go out, two stop
+pulses damp the ringing, and the echo comes back on the same wire.
+
+* **J4** — 4-pin 2.54 mm: 1 `CH0_OUT`+`CH0_IN`, 2 `PVSS`, 3 `CH1_OUT`+`CH1_IN`, 4 `PVSS`.
+
+**What is not settled**, and cannot be until a transducer is chosen: whether `CHx_OUT` and `CHx_IN`
+tie directly at the pins or want a series element between drive and sense; whether the drive needs
+current limiting; and what protection the cable into a wet meter body needs. Those depend on the
+transducer's impedance and on the mechanics, and this is the one part of the board that should be
+laid out with test points and the freedom to fit or omit series parts.
 
 **Y2 must be a crystal, not an oscillator module.** The datasheet is explicit: *"Do not connect the
 USSXTIN and USSXTOUT pins to AVCC or DVCC. USSXTIN does not support bypass mode, so do not drive an

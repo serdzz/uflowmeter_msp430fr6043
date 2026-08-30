@@ -4,6 +4,33 @@
 constraints below are the ones that decide whether the board works; a layout that satisfies them is
 still a layout somebody has to draw and check.
 
+## Getting started: the netlist
+
+[`uflowmeter.net`](uflowmeter.net) is a KiCad netlist — 54 components, 37 nets, 169 nodes. In
+pcbnew, **File → Import → Netlist**, and every footprint lands on the board with the ratsnest
+already correct. Every footprint name resolves against KiCad's stock libraries and every net has at
+least two nodes, both checked.
+
+That skips the schematic-capture step and puts you straight into placement. It does mean there is no
+drawn schematic to maintain — [`SCHEMATIC.md`](SCHEMATIC.md) is the record instead.
+
+## Placement, in the order that matters
+
+Three regions, and they should not interleave. Place in this order, because each constrains the
+next:
+
+1. **U1 and Y2 first.** The 8 MHz crystal is the measurement — put it against U1's pins 62/63 with
+   a ground guard and its own vias, and let nothing else compete for that corner. Y1 goes near
+   pins 6/7.
+2. **The ultrasonic corner next**, along U1's pins 53–60. J4 comes straight out of the board edge
+   from there. `PVCC` decoupling sits at pins 56/57; `PVSS` returns on its own path.
+3. **The RF block last, and as a unit.** U2, Y3 and the whole L121…C126 chain, copied from
+   `CC1101EM_868_915MHz_LAYOUT_3_0_0.pdf` component for component, then J2 at the board edge. Do
+   not let this block be reshaped to fit — reshape everything else around it.
+
+Then the cheap stuff: Q1 beside J3, SW1 where a finger reaches it, J1 and J5 anywhere convenient on
+the edge, C1 at the cell terminals.
+
 ## Stackup
 
 **Four layers.** JLCPCB's JLC04161H-7628, 1.6 mm, 1 oz outer.
@@ -85,10 +112,17 @@ JLCPCB's standard capability is enough; nothing here needs their advanced proces
 | Min via | 0.3 mm hole / 0.6 mm pad |
 | Min annular ring | 0.13 mm |
 
+## What is still missing
+
+**The routing.** Everything above is placement and rules; no track has been laid. That is the part
+that has to be done on a canvas with somebody looking at it, and the RF section in particular is
+copied geometry rather than anything to be improvised.
+
 ## Before ordering
 
-1. Run DRC clean.
-2. Check the 50 Ω trace width against **JLCPCB's** impedance calculator for the exact stackup.
-3. Confirm every U1 pin number against the FR5043 datasheet's package pinout. **This has not been
-   done** — see `SCHEMATIC.md`.
-4. Confirm the alternate-function table (Table 7-1) for every peripheral pin. **Also not done.**
+1. Route it.
+2. Run DRC clean.
+3. Check the 50 Ω trace width against **JLCPCB's** impedance calculator for the exact stackup
+   ordered.
+4. Confirm U1's exposed-pad size against TI's RGC package drawing — the netlist uses KiCad's
+   generic `EP5.45x5.45mm`, which is a starting point rather than a checked figure.

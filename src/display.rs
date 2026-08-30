@@ -14,6 +14,14 @@
 //! what the meter itself draws. Leaving it on continuously would be 630 µA — three hundred times
 //! the meter, and the end of a 19 Ah cell in about three years.
 //!
+//! # Not P2.0
+//!
+//! The button was on P2.0 until the package drawing was read. On a device with the UART
+//! bootloader — which this one has — **P2.0 is `BSLTX`**, and the bootloader drives it as an
+//! output. A button shorting it to ground would be fighting that driver every time the BSL ran.
+//! P1.4 has no such role, is on an interrupt-capable port, and carries nothing else this design
+//! uses.
+//!
 //! # What the hardware has to be
 //!
 //! * **An IRLML6401 as a high-side switch on the module's VCC.** A P-channel MOSFET: source to the
@@ -57,7 +65,7 @@
 
 use embassy_msp430::gpio::{Level, Output, Pull};
 use embassy_msp430::i2c::{Config as I2cConfig, I2c};
-use embassy_msp430::peripherals::{EUSCI_B0, P1_6, P1_7, P2_0};
+use embassy_msp430::peripherals::{EUSCI_B0, P1_4, P1_6, P1_7};
 use embassy_msp430::Peri;
 use embassy_time::{Duration, Instant, Timer};
 
@@ -172,7 +180,7 @@ pub struct Display {
     i2c: Peri<'static, EUSCI_B0>,
     scl: Peri<'static, P1_7>,
     sda: Peri<'static, P1_6>,
-    button: Peri<'static, P2_0>,
+    button: Peri<'static, P1_4>,
 }
 
 impl Display {
@@ -182,7 +190,7 @@ impl Display {
         i2c: Peri<'static, EUSCI_B0>,
         scl: Peri<'static, P1_7>,
         sda: Peri<'static, P1_6>,
-        button: Peri<'static, P2_0>,
+        button: Peri<'static, P1_4>,
     ) -> Self {
         Self {
             // High is off for a P-channel high-side switch, and off is where the display spends
