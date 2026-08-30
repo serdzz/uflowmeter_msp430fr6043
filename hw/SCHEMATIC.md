@@ -165,24 +165,27 @@ The SSD1306 module is bought as a module and plugged in, not assembled here.
   push current through its protection diodes — invisible on a bench supply and fatal to a ten-year
   battery.
 * **C18** — 1 µF `0603` on `VCC_DISP`.
-* **J3** — 4-pin 2.54 mm, **on the back of the board**: 1 `GND`, 2 `VCC_DISP`, 3 `I2C_SCL`,
-  4 `I2C_SDA`, in a row along +x at y = 20.5 mm.
+* **J3** — 4-pin 2.54 mm, on the **front**, pins in a row at y = 6 mm: 1 `GND`, 2 `VCC_DISP`,
+  3 `I2C_SCL`, 4 `I2C_SDA`.
 
-  The module mounts on the reverse side, facing out, and plugs straight in — no flying leads. Its
-  27 × 27 mm body then occupies x 33.8…60.8, y 20.5…47.5 on the back, which was chosen rather than
-  guessed: it clears the through-hole pins of `J1`, `J4`, `J5` and `BT1`, all of which protrude on
-  that side, and it stays off the radio, since a module with its own ground plane and a charge pump
-  sitting over the 868 MHz balun would detune it.
+  The module stands on this header and its 27 x 27 mm body hangs below it, over **x 38.3…65.3,
+  y 6…33** — directly above the button, which sits at x 47.2…56.4, y 35.9…46.1. Three millimetres
+  between them. That is the front panel: reading on top, button under it, both reachable through
+  the same face of an enclosure.
 
-  **Check the mating before ordering.** The order `GND VCC SCL SDA` is the module's, read off the
-  silkscreen of the actual part. But a header on the back reads mirrored from the front, and which
-  way round the module then seats depends on which side its body hangs — that is the kind of thing
-  that is obvious with the part in your hand and easy to get backwards on a screen.
+  The board was rearranged around this rather than the header being dropped somewhere free. The
+  transducer header moved to the top left, the cell and the calibration header to the right edge
+  below the panel, and the display's own passives out from under the button — because a 27 mm
+  module above a button needs a clear column, and nothing that protrudes may sit under it.
 
-  It was
-  the other way round in the first draft, which would have put the supply across the module
-  backwards the first time anyone plugged it in. Both orders exist in the wild, so this one is
-  worth checking against the module in hand rather than against habit.
+  **What does sit under it** is `U1` and its decoupling, all surface mount, which the module clears
+  on its header standoff. Fine to build, awkward to rework: probing the MCU means lifting the
+  display.
+
+  **Check the mating before ordering.** The order `GND VCC SCL SDA` is the module's own, read off
+  the silkscreen of the part in hand. It was `VCC GND SCL SDA` in the first draft, which would have
+  put the supply across the module backwards; both orders exist on these breakouts, so this is
+  worth checking against the part and not against habit.
 
 ## Button
 

@@ -61,9 +61,13 @@ expect to move things.
 Then the cheap stuff: Q1 beside the display net, SW1 where a finger reaches it, J1 and J5 anywhere
 convenient on the edge, C1 at the cell terminals.
 
-**J3 is on the back**, so the display module mounts on the reverse side facing out. Its body has to
-clear every through-hole pin that protrudes there — `J1`, `J4`, `J5`, `BT1` — and stay off the
-radio. Thirty-seven positions satisfy all of that; the one used is pin 1 at (43.5, 20.5).
+**The right half is a front panel.** The display module hangs from J3 at the top (body x 38.3…65.3,
+y 6…33) with the button directly below it (x 47.2…56.4, y 35.9…46.1). Everything tall was moved out
+from under the module: the transducer header to the top left, the cell and the calibration header to
+the right edge below the panel.
+
+`U1` and its decoupling remain under the module, which is fine to build — the module clears them on
+its header standoff — and awkward to rework, since probing the MCU means lifting the display.
 
 ## Stackup
 
