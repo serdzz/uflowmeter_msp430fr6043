@@ -14,10 +14,11 @@ outline, with filled pours on every layer. **DRC reports zero violations.**
 | Unconnected at first placement | 134 |
 | After the pours were filled | 86 |
 | After 16 stitching vias took `VCC` down to its plane | 70 |
-| Now | **69** |
+| After routing 12 signal nets | **36** |
 
-So ground and supply are done — through the planes, as they should be — and what is left is signal
-routing.
+Ground and the supplies go through the planes. Twelve signal nets are routed — each pad escaping
+outward to a via and then running on the bottom layer, which is how a person gets out of a 0.5 mm
+pitch QFN and is the only thing that works here. 89 tracks, 55 vias, DRC clean.
 
 [`uflowmeter.kicad_pro`](uflowmeter.kicad_pro) carries the net classes:
 
@@ -152,21 +153,27 @@ JLCPCB's standard capability is enough; nothing here needs their advanced proces
 
 ## What is still missing
 
-**Signal routing.** Ground and the supplies are carried by the planes and are connected; the 69
-remaining items are signals.
+**Twenty-four unconnected items are signals**, on fourteen nets the router could not get through:
+`BUTTON`, `I2C_SCL`, `I2C_SDA`, `CH0`, the `SPI` group, `XOSC_Q1`/`Q2`, `USSXTOUT`, the `UART` pair
+and a few others. They want the interactive router, which can push and shove existing tracks; this
+one only ever adds.
 
-They were left rather than forgotten. Routing them by straight line between pads was tried and
-refused itself: of eleven two-pad nets, ten were blocked, because a straight run from a crystal to
-its `QFN` pin necessarily passes over the neighbouring pins. Real routing escapes from the package
-first and changes layer, which is a router's job or a person's, not a script's.
-
-**The RF chain was deliberately not routed at all.** Its geometry has to be lifted from
+**The rest is the RF chain, deliberately untouched.** Its geometry has to be lifted from
 `CC1101EM_868_915MHz_LAYOUT_3_0_0.pdf`, and a generic trace between those pads would be worse than
 no trace, because it would look finished.
 
-One thing to know before routing: the top layer already carries a filled ground pour. KiCad refills
-around new tracks, so this is harmless, but it is the reverse of the usual order and can be
-surprising. That is the part
+### About the routing that is there
+
+It is machine routing and it looks like it: long diagonals across the bottom layer where a person
+would have gone round in short orthogonal hops. Every track is DRC-clean and electrically right, but
+several are far longer than they need to be, and the ones carrying `USSXTIN`/`USSXTOUT` and the I²C
+pair are worth redoing by hand — the first because that crystal is the measurement, the second
+because a long unshielded I²C run beside the radio is asking for trouble.
+
+Treat it as a first pass that saves the tedious part, not as a finished layout.
+
+One thing to know: the top layer carries a filled ground pour. KiCad refills around new tracks, so
+this is harmless, but it is the reverse of the usual order and can be surprising. That is the part
 that has to be done on a canvas with somebody looking at it, and the RF section in particular is
 copied geometry rather than anything to be improvised.
 
