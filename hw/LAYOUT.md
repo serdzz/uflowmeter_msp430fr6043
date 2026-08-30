@@ -14,11 +14,26 @@ outline, with filled pours on every layer. **DRC reports zero violations.**
 | Unconnected at first placement | 134 |
 | After the pours were filled | 86 |
 | After 16 stitching vias took `VCC` down to its plane | 70 |
-| After routing the signal nets | **37** |
+| After routing the signal nets | **34** |
 
-Ground and the supplies go through the planes. The signals are routed by two passes, both kept
-here so the board can be rebuilt: [`route_maze.py`](route_maze.py) then
-[`route_escape.py`](route_escape.py). DRC clean.
+Of those 34, seventeen are the RF chain, left alone on purpose. The other seventeen are signals on
+fifteen nets the routers could not get through.
+
+Ground and the supplies go through the planes. 355 tracks, 60 vias, DRC clean. Rebuild with:
+
+```
+python3 route_maze.py    uflowmeter.kicad_pcb fat   # A* on a 0.05 mm grid, ~2.5 min
+python3 route_cleanup.py uflowmeter.kicad_pcb       # drop whatever DRC objects to
+python3 route_escape.py  uflowmeter.kicad_pcb       # cruder pass for what is left
+python3 route_cleanup.py uflowmeter.kicad_pcb
+```
+
+using KiCad's own Python, which is the only one with `pcbnew`.
+
+`route_cleanup.py` exists because the routers model clearance as inflated rectangles on a grid,
+which is close to KiCad's computation but not identical. Where they disagree KiCad is right, so it
+drops the offending tracks and leaves those connections for a person — better than shipping a board
+that fails its own rule check.
 
 [`uflowmeter.kicad_pro`](uflowmeter.kicad_pro) carries the net classes:
 
@@ -173,10 +188,12 @@ JLCPCB's standard capability is enough; nothing here needs their advanced proces
 
 ## What is still missing
 
-**Twenty-four unconnected items are signals**, on fourteen nets the router could not get through:
-`BUTTON`, `I2C_SCL`, `I2C_SDA`, `CH0`, the `SPI` group, `XOSC_Q1`/`Q2`, `USSXTOUT`, the `UART` pair
-and a few others. They want the interactive router, which can push and shove existing tracks; this
-one only ever adds.
+**Seventeen unconnected items are signals**, on fifteen nets: `CH0`, `I2C_SCL`, the `SPI` group,
+`XOSC_Q1`/`Q2`, `USSXTIN`/`USSXTOUT`, `RADIO_CS`, `RADIO_DCOUPL`, `RADIO_RBIAS`, `TEST`, `UART_TX`.
+They want the interactive router, which can push and shove what is already there; these only ever
+add.
+
+Most of them are the last pins of the two QFNs, which is where the room runs out first.
 
 **The rest is the RF chain, deliberately untouched.** Its geometry has to be lifted from
 `CC1101EM_868_915MHz_LAYOUT_3_0_0.pdf`, and a generic trace between those pads would be worse than

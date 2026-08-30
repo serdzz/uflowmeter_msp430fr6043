@@ -8,12 +8,12 @@ from array import array
 from pcbnew import FromMM as MM, VECTOR2I
 
 BRD   = sys.argv[1]
-GRID  = 0.1                      # mm per cell
+GRID  = 0.05                     # mm per cell
 # Keep-out around foreign copper. 0.275 mm is what the rules actually need -- half a track plus
 # the class clearance -- and the margin above that has to stay small: the keep-out is painted as
 # a rectangle, so on a 0.5 mm pitch QFN too much of it closes the one way out of a pin, which is
 # straight outward along the pin's own axis.
-CLR   = 0.29
+CLR   = 0.28
 # 0.15 mm, not 0.25. On a 0.5 mm pitch QFN the neighbouring pads sit 0.35 mm from the pin's own
 # axis, so a 0.25 mm track -- which needs 0.275 mm of room from its centre -- cannot leave the pin
 # at all; the keep-outs meet over the escape corridor and close it. At 0.15 mm the corridor opens.
@@ -116,9 +116,18 @@ def route(sources, targets, netcode):
     tset = set(targets)
     if not tset: return None
     tx = sum(t[0] for t in targets)/len(targets); ty = sum(t[1] for t in targets)/len(targets)
+    # Weighted A*: paths come out a few per cent longer and the search finishes in a fraction of
+    # the nodes, which is the only way a 0.05 mm grid is affordable in Python.
     def h(x,y):
         dx,dy = abs(x-tx), abs(y-ty)
-        return int(10*max(dx,dy) + 4*min(dx,dy))
+        return int(12*max(dx,dy) + 5*min(dx,dy))
+
+    # and it never needs to look far outside the box the net lives in
+    MARG = int(12.0/GRID)
+    axs=[c[0] for c in sources]+[t[0] for t in targets]
+    ays=[c[1] for c in sources]+[t[1] for t in targets]
+    lox, hix = min(axs)-MARG, max(axs)+MARG
+    loy, hiy = min(ays)-MARG, max(ays)+MARG
     pq=[]; best={}
     for (x,y,li) in sources:
         if owner[li][y*NX+x] in (0, netcode):
@@ -135,9 +144,15 @@ def route(sources, targets, netcode):
             return path[::-1]
         for dx,dy,c in DIRS:
             nx,ny = x+dx, y+dy
+            if not (lox<=nx<=hix and loy<=ny<=hiy): continue
             if not (0<=nx<NX and 0<=ny<NY): continue
             o = owner[li][ny*NX+nx]
             if o not in (0, netcode): continue
+            # no corner cutting: a 45 degree step sweeps the two cells beside it, and letting it
+            # clip one is how a track ends up a hair too close to the pin next door
+            if dx and dy:
+                if owner[li][y*NX+nx] not in (0, netcode): continue
+                if owner[li][ny*NX+x] not in (0, netcode): continue
             ns=(nx,ny,li); ng=g+c
             if best.get(ns, 1<<30) <= ng: continue
             best[ns]=ng; heapq.heappush(pq,(ng+h(nx,ny),ng,ns,st))
@@ -172,8 +187,24 @@ def commit(path, net):
         lay = BOTH if isinstance(a, pcbnew.PCB_VIA) else [LI[a.GetLayer()]]
         paint(a.GetBoundingBox(), net.GetNetCode(), lay)
 
-done=fail=0
-for netname, plist in sorted(pads.items(), key=lambda kv: -len(kv[1])):
+# A greedy router spends whatever space it is given, so the order it takes the nets in changes
+# the result more than any of its costs do. The driver tries several and keeps the best.
+ORDER = sys.argv[2] if len(sys.argv) > 2 else 'fat'
+
+def span(kv):
+    xs=[p.GetPosition().x for p in kv[1]]; ys=[p.GetPosition().y for p in kv[1]]
+    return (max(xs)-min(xs)) + (max(ys)-min(ys))
+
+KEYS = {
+ 'fat':   lambda kv: -len(kv[1]),          # most pads first
+ 'thin':  lambda kv:  len(kv[1]),
+ 'short': lambda kv:  span(kv),            # tightest nets first
+ 'long':  lambda kv: -span(kv),
+ 'name':  lambda kv:  kv[0],
+}
+
+done=fail=links=0
+for netname, plist in sorted(pads.items(), key=KEYS[ORDER]):
     if netname in SKIP or len(plist) < 2: continue
     net = plist[0].GetNet(); nc = net.GetNetCode()
     connected = set(cells_of(plist[0]))
@@ -186,9 +217,11 @@ for netname, plist in sorted(pads.items(), key=lambda kv: -len(kv[1])):
             # one unreachable pad must not abandon the other eleven
             ok=False; continue
         commit(p, net)
+        links += 1
         connected |= set(p) | set(tgt)
     done += ok; fail += (not ok)
 
 pcbnew.ZONE_FILLER(board).Fill(board.Zones())
 board.Save(BRD)
-print(f"nets fully routed {done}, partly or not at all {fail}")
+print(f"order={ORDER} nets fully routed {done}, partly {fail}, connections made {links}")
+print(f"SCORE {links}")
