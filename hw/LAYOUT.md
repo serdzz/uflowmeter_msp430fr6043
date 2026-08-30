@@ -14,11 +14,11 @@ outline, with filled pours on every layer. **DRC reports zero violations.**
 | Unconnected at first placement | 134 |
 | After the pours were filled | 86 |
 | After 16 stitching vias took `VCC` down to its plane | 70 |
-| After routing 12 signal nets | **36** |
+| After routing the signal nets | **37** |
 
-Ground and the supplies go through the planes. Twelve signal nets are routed — each pad escaping
-outward to a via and then running on the bottom layer, which is how a person gets out of a 0.5 mm
-pitch QFN and is the only thing that works here. 89 tracks, 55 vias, DRC clean.
+Ground and the supplies go through the planes. The signals are routed by two passes, both kept
+here so the board can be rebuilt: [`route_maze.py`](route_maze.py) then
+[`route_escape.py`](route_escape.py). DRC clean.
 
 [`uflowmeter.kicad_pro`](uflowmeter.kicad_pro) carries the net classes:
 
@@ -162,15 +162,28 @@ one only ever adds.
 `CC1101EM_868_915MHz_LAYOUT_3_0_0.pdf`, and a generic trace between those pads would be worse than
 no trace, because it would look finished.
 
-### About the routing that is there
+### The two passes, and which tracks came from which
 
-It is machine routing and it looks like it: long diagonals across the bottom layer where a person
-would have gone round in short orthogonal hops. Every track is DRC-clean and electrically right, but
-several are far longer than they need to be, and the ones carrying `USSXTIN`/`USSXTOUT` and the I²C
-pair are worth redoing by hand — the first because that crystal is the measurement, the second
-because a long unshielded I²C run beside the radio is asking for trouble.
+**`route_maze.py`** is a grid router: A* on both layers, eight directions, a via costed at about
+five millimetres of track. Octile movement is what gives it the shape — its runs come out
+horizontal, vertical or at 45°, the way a person draws them.
 
-Treat it as a first pass that saves the tedious part, not as a finished layout.
+**`route_escape.py`** is the cruder pass that follows: escape each pad to a via, then take whatever
+straight or L-shaped run is clear. Its tracks are the long arbitrary diagonals, and they are the
+ones worth redoing by hand.
+
+Two things the grid router taught, both worth keeping:
+
+* **A cell claimed by two nets belongs to neither.** On a 0.5 mm pitch package the neighbouring
+  pins' keep-outs overlap, and letting the first claimant own the cell is exactly how a track ends
+  up crossing its neighbour's pad — 67 violations' worth, the first time.
+* **The keep-out cannot be generous.** It is painted as a rectangle, so a margin much over the
+  0.275 mm the rules need closes the one way out of a QFN pin, which is straight outward along the
+  pin's own axis. At 0.38 mm nothing escaped at all.
+
+Treat all of it as a first pass that saves the tedious part, not as a finished layout. `USSXTIN`
+and `USSXTOUT` in particular want redoing by hand — that crystal is the measurement — and so does
+the I²C pair, which should not take a long unshielded run past the radio.
 
 One thing to know: the top layer carries a filled ground pour. KiCad refills around new tracks, so
 this is harmless, but it is the reverse of the usual order and can be surprising. That is the part
