@@ -153,7 +153,7 @@ The SSD1306 module is bought as a module and plugged in, not assembled here.
 | Net | From | To |
 | --- | --- | --- |
 | `DISP_GATE` | U1 P3.4 (pin 51) | Q1 gate, R2 |
-| `VCC_DISP` | Q1 drain | J3 pin 1, R3, R4, C18 |
+| `VCC_DISP` | Q1 drain | J3 pin 2, R3, R4, C18 |
 | `I2C_SCL` | U1 P1.7 (pin 24) | J3 pin 3, R3 |
 | `I2C_SDA` | U1 P1.6 (pin 23) | J3 pin 4, R4 |
 
@@ -165,7 +165,12 @@ The SSD1306 module is bought as a module and plugged in, not assembled here.
   push current through its protection diodes — invisible on a bench supply and fatal to a ten-year
   battery.
 * **C18** — 1 µF `0603` on `VCC_DISP`.
-* **J3** — 4-pin 2.54 mm: 1 `VCC_DISP`, 2 `GND`, 3 `I2C_SCL`, 4 `I2C_SDA`.
+* **J3** — 4-pin 2.54 mm: **1 `GND`, 2 `VCC_DISP`, 3 `I2C_SCL`, 4 `I2C_SDA`.**
+
+  That order is the module's, read off the silkscreen of the actual part: `GND VCC SCL SDA`. It was
+  the other way round in the first draft, which would have put the supply across the module
+  backwards the first time anyone plugged it in. Both orders exist in the wild, so this one is
+  worth checking against the module in hand rather than against habit.
 
 ## Button
 

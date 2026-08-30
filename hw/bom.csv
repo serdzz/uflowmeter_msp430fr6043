@@ -32,6 +32,6 @@ Ferrite bead 1k@100MHz,L2,0402,,,CC1101 supply feed
 15pF NP0,C12,0402,,BASIC,Y3 load -- NOT equal to C11
 u.FL,J2,IPEX,,,antenna connector
 Header 1.27mm 4p,J1,,,,"Spy-Bi-Wire: VCC,GND,SBWTDIO,SBWTCK"
-Header 2.54mm 4p,"J3,J4",,,,display module / transducers
+Header 2.54mm 4p,"J3,J4",,,,"J3 = GND VCC SCL SDA, matching the module silkscreen"
 Header 2.54mm 3p,J5,,,,"calibration UART: GND,TX,RX"
 Tactile switch,SW1,,,,button
