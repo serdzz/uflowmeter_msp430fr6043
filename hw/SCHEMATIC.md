@@ -1,8 +1,7 @@
 # Schematic
 
-Every net, every pin. The pin assignments are the ones the firmware claims — they are checked
-against `embassy-msp430`'s pin traits, **not** against the datasheet's Table 7-1. See the caveat at
-the end.
+Every net, every pin. Pin **numbers** are in [`PINOUT.md`](PINOUT.md), read off the datasheet's
+section 9.14 and quoted here for the RGC (VQFN-64) package the board uses.
 
 ## Power
 
@@ -46,7 +45,7 @@ Three crystals. Two of them decide whether the instrument works at all.
 | | Crystal | Load caps | Net |
 | --- | --- | --- | --- |
 | LFXT 32.768 kHz | Y1 | C6, C7 | `LFXIN`, `LFXOUT` |
-| **USSXT 8 MHz** | Y2 | C8, C9 | `USSXTIN`, `USSXTOUT` |
+| **USSXT 8 MHz** | Y2 | C8, C9 | `USSXTIN` (62), `USSXTOUT` (63) |
 
 **Y2 is the measurement.** Every sample interval and every excitation period is derived from the
 80 MHz the HSPLL makes from it, so an error here is an error in every reading at once. Its
@@ -70,10 +69,10 @@ Load capacitor values follow each crystal's C\_L, not a habit — see `LAYOUT.md
 
 | CC1101 | Net | MCU pin |
 | --- | --- | --- |
-| SI | `SPI_MOSI` | P1.2 (UCA1SIMO) |
-| SO (GDO1) | `SPI_MISO` | P1.3 (UCA1SOMI) |
-| SCLK | `SPI_SCK` | P1.0 (UCA1CLK) |
-| CSn | `RADIO_CS` | P3.5 |
+| SI | `SPI_MOSI` | P1.2 — RGC64 pin 19 |
+| SO (GDO1) | `SPI_MISO` | P1.3 — RGC64 pin 20 |
+| SCLK | `SPI_SCK` | P1.0 — RGC64 pin 3 |
+| CSn | `RADIO_CS` | P3.5 — RGC64 pin 52 |
 | XOSC_Q1/Q2 | Y3 26 MHz + C11, C12 | |
 | AVDD ×3, DVDD | `VCC` | C13–C16 100 n `0402` each |
 | DCOUPL | `RADIO_DCOUPL` | C17 100 n to `GND` |
@@ -141,10 +140,10 @@ The SSD1306 module is bought as a module and plugged in, not assembled here.
 
 | Net | From | To |
 | --- | --- | --- |
-| `DISP_GATE` | U1 P3.4 | Q1 gate, R2 |
+| `DISP_GATE` | U1 P3.4 (pin 51) | Q1 gate, R2 |
 | `VCC_DISP` | Q1 drain | J3 pin 1, R3, R4, C18 |
-| `I2C_SCL` | U1 P1.7 | J3 pin 3, R3 |
-| `I2C_SDA` | U1 P1.6 | J3 pin 4, R4 |
+| `I2C_SCL` | U1 P1.7 (pin 24) | J3 pin 3, R3 |
+| `I2C_SDA` | U1 P1.6 (pin 23) | J3 pin 4, R4 |
 
 * **Q1** — IRLML6401, P-channel, `SOT-23`. Source to `VCC`, drain to `VCC_DISP`. **The gate is low
   to turn the display on.**
@@ -160,22 +159,39 @@ The SSD1306 module is bought as a module and plugged in, not assembled here.
 
 | Net | Part |
 | --- | --- |
-| `BUTTON` | SW1 to `GND`, C19 100 n to `GND`, U1 P2.0 |
+| `BUTTON` | SW1 to `GND`, C19 100 n to `GND`, U1 P2.0 (pin 21) |
 
 No pull-up resistor: the firmware enables the internal one only while waiting, so that it is not a
 permanent leak. With that ~35 k pull-up, C19 gives about 3.5 ms of debounce.
 
-## Transducers
+## Ultrasonic front end
+
+Its own power domain. Do not merge it into `AVCC`.
+
+| Net | Pin (RGC64) | To |
+| --- | ---: | --- |
+| `CH0_OUT` | 59 | J4 pin 1 — transducer A drive |
+| `CH0_IN` | 60 | J4 pin 2 — transducer A echo |
+| `CH1_OUT` | 54 | J4 pin 3 — transducer B drive |
+| `CH1_IN` | 53 | J4 pin 4 — transducer B echo |
+| `PVCC` | 56, 57 | `VCC` through C20 100 n at each pin |
+| `PVSS` | 55, 58 | star ground, on its own return |
+| `USSXTIN` | 62 | Y2 |
+| `USSXTOUT` | 63 | Y2 |
 
 * **J4** — 4-pin 2.54 mm to the two 1 MHz transducers.
 
-**This is the part of the schematic that is least finished.** The USS front-end pins (`CH0`/`CH1`
-drive and the ADC return) are dedicated analog pins whose numbers on the VQFN-64 package have not
-been read off the datasheet — see below.
+**Y2 must be a crystal, not an oscillator module.** The datasheet is explicit: *"Do not connect the
+USSXTIN and USSXTOUT pins to AVCC or DVCC. USSXTIN does not support bypass mode, so do not drive an
+external clock to USSXTIN pin."* Those two pins are a 1.5 V analog domain of their own — treat them
+as analog, not as a logic clock input.
+
+`PVCC` is the supply that swings while a transducer is driven, so its decoupling goes at the pins
+and its return reaches the star ground separately from the digital one.
 
 ## Calibration
 
-* **J5** — 3-pin 2.54 mm: 1 `GND`, 2 `UART_TX` (U1 P4.3), 3 `UART_RX` (U1 P4.4).
+* **J5** — 3-pin 2.54 mm: 1 `GND`, 2 `UART_TX` (P4.3, pin 31), 3 `UART_RX` (P4.4, pin 32).
 
 Only alive while the instrument is unsealed. Once sealed, the firmware never opens the UART again.
 
@@ -185,13 +201,16 @@ Only alive while the instrument is unsealed. Once sealed, the firmware never ope
 
 Read this before ordering anything.
 
-1. **No pin *numbers* are in this document, only pin *names*.** Turning names into the 64 pads of a
-   VQFN-64 needs the FR5043 datasheet's package pinout, which has not been opened here.
-2. **The alternate-function assignments are unconfirmed.** `embassy-msp430` carries this note in its
-   own source: *"the alternates are derived from the order of the functions in the datasheet's
-   package pinout and want checking against Table 7-1."* If an alternate is wrong, that peripheral
-   silently does not appear on that pin.
-3. **P1.7 is also `USSTRG`.** It is used here as I²C SCL. If the USS front end ever needs its
+1. **P1.7 is also `USSTRG`.** It is used here as I²C SCL. If the USS front end ever needs its
    external trigger, these two want separating.
-4. **The USS front-end connections are not specified**, per above.
-5. **The RF section has no component values here** — by design, they come from TI's reference.
+2. **The RF section has no component values here** — by design, they come from TI's reference.
+3. **The firmware still builds for the 80-pin FR6043**, while this board is the 64-pin FR5043. Every
+   pin it uses exists on both and carries the same function, so the change is a feature flag rather
+   than a rework — but it has not been made or built yet.
+4. **The transducer interface is specified but not designed.** Which pins go where is now known;
+   what sits between them and the transducers — matching, bias, protection — is not, and depends on
+   transducers nobody has chosen.
+
+Previously listed here and now done: the pin numbers (see [`PINOUT.md`](PINOUT.md)), the
+alternate-function check against the datasheet (which found a real bug — P1.7's `UCB0SCL` is the
+second alternate, not the third, and `embassy-msp430` had it wrong), and the USS front-end pins.

@@ -18,6 +18,7 @@ So: three documents a person can lay out from, and a BOM they can order against.
 | | |
 | --- | --- |
 | [`SCHEMATIC.md`](SCHEMATIC.md) | every net and pin, with what is unverified stated at the end |
+| [`PINOUT.md`](PINOUT.md) | pin numbers and mux encodings, read off the datasheet |
 | [`bom.csv`](bom.csv) | JLCPCB BOM — LCSC numbers, tiers, notes |
 | [`LAYOUT.md`](LAYOUT.md) | stackup, the three sections, design rules |
 
