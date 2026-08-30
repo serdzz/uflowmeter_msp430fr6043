@@ -53,8 +53,12 @@ const STARTUP_US: u32 = 1_000;
 /// many pixels are lit, so an all-white screen is thirty times this.
 const DISPLAY_UA: u32 = 630;
 
-/// The CC1101 while transmitting at +10 dBm, in microamps.
-const RADIO_TX_UA: u32 = 30_000;
+/// The CC1101 while transmitting, in microamps.
+///
+/// TI's own measurement, Design Note DN017 Table 5, for `PA = 0xC0` with wirewound matching
+/// inductors: 35.0 mA for 12.0 dBm out. The inductor type is not a detail -- with multilayer parts
+/// the same setting draws 33.6 mA for 9.8 dBm and TI records the EN 300 220 margin as "none".
+const RADIO_TX_UA: u32 = 35_000;
 
 /// How long a frame takes, in microseconds.
 ///

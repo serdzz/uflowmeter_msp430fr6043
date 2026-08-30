@@ -73,7 +73,12 @@ const CONFIG: [(u8, u8); 21] = [
 /// Sync word for wM-Bus mode C, frame format A.
 const SYNC: (u8, u8) = (0x54, 0x3d);
 
-/// Output power, as a `PATABLE` entry. 0xC0 is about +10 dBm at 868 MHz.
+/// Output power, as a `PATABLE` entry.
+///
+/// `0xC0` is 12.0 dBm at 35.0 mA, per TI Design Note DN017 Table 5 -- **with wirewound matching
+/// inductors**. The same setting with multilayer inductors gives 9.8 dBm and leaves no margin
+/// against EN 300 220, so this constant and the board's bill of materials have to agree. See
+/// `hw/SCHEMATIC.md`.
 const PA_POWER: u8 = 0xc0;
 
 /// The radio.

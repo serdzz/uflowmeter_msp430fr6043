@@ -25,8 +25,8 @@ firmware does:
 
 | | Front end | Correlation | Display | Radio | Average |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Water moving, every 2 s | 1 100 µs | 14 000 µs | 1.35 µA | 2.0 µA | **13.1 µA** |
-| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 1.35 µA | 2.0 µA | **5.4 µA** |
+| Water moving, every 2 s | 1 100 µs | 14 000 µs | 1.35 µA | 2.33 µA | **13.4 µA** |
+| Nothing moving, every 30 s | 1 100 µs | 14 000 µs | 1.35 µA | 2.33 µA | **5.7 µA** |
 
 Two things in that table are not what one would guess.
 
@@ -45,7 +45,8 @@ measuring less often, which is what the adaptive interval does.
 
 That is not a limitation, it is what makes a radio affordable at all. Receiving costs 15.6 mA; an
 instrument listening even one per cent of the time would draw 156 µA, ten times everything else here
-put together. A frame is about 30 mA for four milliseconds, which at one a minute averages **2 µA**.
+put together. A frame is 35 mA for four milliseconds — TI's own measurement for this power setting with wirewound
+matching inductors — which at one a minute averages **2.33 µA**.
 Between frames the CC1101 sits in `SPWD` at 200 nA — below the meter's own sleep current.
 
 What it rules out is a downlink: no remote configuration, no acknowledgement, no over-the-air
@@ -104,6 +105,23 @@ The I2C pull-ups belong on the *switched* rail. Pull-ups above an unpowered chip
 through its protection diodes — a leak invisible on a bench supply and fatal to a ten-year battery.
 The firmware does its half by dropping the I2C driver before cutting power, which returns SDA and
 SCL to GPIO inputs.
+
+## The board
+
+[`hw/`](hw/) carries the schematic, a JLCPCB bill of materials with verified LCSC part numbers, and
+the layout constraints. There is no layout and there are no Gerbers.
+
+Three things it found that changed the design:
+
+* **JLCPCB cannot assemble an FR6043** — it is not in their library. It can assemble the **FR5043**,
+  which is the same part without the LCD controller this design never uses. The firmware already
+  builds for both.
+* **The plain ER34615 will not run the radio.** It is a low-drain cell with a passivation layer that
+  grows while it sits; a 35 mA pulse after a quiet month would sag it badly. The **ER34615H**
+  carries a hybrid layer capacitor for exactly that.
+* **Selling it in Europe needs wirewound matching inductors and a 699 MHz notch filter.** Both from
+  TI Design Note DN017, neither obvious from the CC1101 datasheet, and the cheaper multilayer
+  inductors are the wrong default.
 
 ## The number that matters more than any of these
 
