@@ -6,9 +6,18 @@ still a layout somebody has to draw and check.
 
 ## The board file
 
-Open [`uflowmeter.kicad_pcb`](uflowmeter.kicad_pcb) — 54 footprints placed, 37 nets, a 70 × 55 mm
-outline, four layers, and copper pours on all of them. **DRC reports zero violations**; the 134
-unconnected items are the unrouted nets, which is the work that remains.
+Open [`uflowmeter.kicad_pcb`](uflowmeter.kicad_pcb) — 54 footprints placed on a 70 × 55 mm four-layer
+outline, with filled pours on every layer. **DRC reports zero violations.**
+
+| | |
+| --- | ---: |
+| Unconnected at first placement | 134 |
+| After the pours were filled | 86 |
+| After 16 stitching vias took `VCC` down to its plane | 70 |
+| Now | **69** |
+
+So ground and supply are done — through the planes, as they should be — and what is left is signal
+routing.
 
 [`uflowmeter.kicad_pro`](uflowmeter.kicad_pro) carries the net classes:
 
@@ -135,7 +144,21 @@ JLCPCB's standard capability is enough; nothing here needs their advanced proces
 
 ## What is still missing
 
-**The routing.** No track has been laid; the zones are drawn but not filled. That is the part
+**Signal routing.** Ground and the supplies are carried by the planes and are connected; the 69
+remaining items are signals.
+
+They were left rather than forgotten. Routing them by straight line between pads was tried and
+refused itself: of eleven two-pad nets, ten were blocked, because a straight run from a crystal to
+its `QFN` pin necessarily passes over the neighbouring pins. Real routing escapes from the package
+first and changes layer, which is a router's job or a person's, not a script's.
+
+**The RF chain was deliberately not routed at all.** Its geometry has to be lifted from
+`CC1101EM_868_915MHz_LAYOUT_3_0_0.pdf`, and a generic trace between those pads would be worse than
+no trace, because it would look finished.
+
+One thing to know before routing: the top layer already carries a filled ground pour. KiCad refills
+around new tracks, so this is harmless, but it is the reverse of the usual order and can be
+surprising. That is the part
 that has to be done on a canvas with somebody looking at it, and the RF section in particular is
 copied geometry rather than anything to be improvised.
 
