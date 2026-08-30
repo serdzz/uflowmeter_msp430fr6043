@@ -132,6 +132,8 @@
    (node (ref "Y3") (pin "4"))
    (node (ref "J4") (pin "2"))
    (node (ref "J4") (pin "4"))
+   (node (ref "U1") (pin "55"))
+   (node (ref "U1") (pin "58"))
   )
   (net (code 8) (name "I2C_SCL")
    (node (ref "U1") (pin "24"))

@@ -4,20 +4,41 @@
 constraints below are the ones that decide whether the board works; a layout that satisfies them is
 still a layout somebody has to draw and check.
 
-## Getting started: the netlist
+## The board file
 
-[`uflowmeter.net`](uflowmeter.net) is a KiCad netlist — 54 components, 37 nets, 169 nodes. In
-pcbnew, **File → Import → Netlist**, and every footprint lands on the board with the ratsnest
-already correct. Every footprint name resolves against KiCad's stock libraries and every net has at
-least two nodes, both checked.
+Open [`uflowmeter.kicad_pcb`](uflowmeter.kicad_pcb) — 54 footprints placed, 37 nets, a 70 × 55 mm
+outline, four layers, and copper pours on all of them. **DRC reports zero violations**; the 134
+unconnected items are the unrouted nets, which is the work that remains.
 
-That skips the schematic-capture step and puts you straight into placement. It does mean there is no
-drawn schematic to maintain — [`SCHEMATIC.md`](SCHEMATIC.md) is the record instead.
+[`uflowmeter.kicad_pro`](uflowmeter.kicad_pro) carries the net classes:
 
-## Placement, in the order that matters
+| Class | Track | Nets |
+| --- | ---: | --- |
+| RF | 0.30 mm | `RF_P`, `RF_N`, `RFA`…`RFE`, `ANT`, `RF_SHUNT` |
+| Power | 0.50 mm | `VCC`, `GND`, `RADIO_VDD`, `VCC_DISP`, `BAT+` |
+| Ultrasonic | 0.25 mm | `USSXTIN`, `USSXTOUT`, `CH0`, `CH1` |
+| Default | 0.20 mm | everything else |
 
-Three regions, and they should not interleave. Place in this order, because each constrains the
-next:
+Clearance is 0.15 mm on every class, which is not laziness: a 0.5 mm pitch QFN has only 0.25 mm
+between its own pads, so a wider clearance makes DRC flag the packages themselves.
+
+[`uflowmeter.net`](uflowmeter.net) is the netlist the board was built from, kept so the board can be
+regenerated or re-imported.
+
+There is no drawn schematic to maintain — [`SCHEMATIC.md`](SCHEMATIC.md) is the record instead.
+
+### What DRC found while this was being placed
+
+Two things worth keeping. `PVSS` — U1 pins 55 and 58, the ultrasonic ground — **was missing from the
+netlist entirely**, and only showed up as two pads with no net. And the transducer header's
+courtyard runs 11 mm down the board, far past its own body, which is why the 8 MHz crystal sits to
+the left of it rather than under it.
+
+## Placement
+
+Already done in the board file, in the order below, because each region constrains the next. It is a
+**starting placement**: DRC-clean and clustered correctly, but drawn without a human eye on it, so
+expect to move things.
 
 1. **U1 and Y2 first.** The 8 MHz crystal is the measurement — put it against U1's pins 62/63 with
    a ground guard and its own vias, and let nothing else compete for that corner. Y1 goes near
@@ -114,7 +135,7 @@ JLCPCB's standard capability is enough; nothing here needs their advanced proces
 
 ## What is still missing
 
-**The routing.** Everything above is placement and rules; no track has been laid. That is the part
+**The routing.** No track has been laid; the zones are drawn but not filled. That is the part
 that has to be done on a canvas with somebody looking at it, and the RF section in particular is
 copied geometry rather than anything to be improvised.
 

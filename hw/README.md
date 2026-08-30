@@ -7,7 +7,7 @@ Design documents for the meter's PCB, aimed at JLCPCB.
 **It is** a specified circuit: every net, a bill of materials with real LCSC part numbers checked
 against JLCPCB's assembly library, and the layout constraints that decide whether it works.
 
-**It is not a board you can order.** There are no Gerbers, because it is not routed. Placing and
+**It is not a board you can order.** It is placed but not routed, so there are no Gerbers. Placing and
 routing a mixed-signal board with an 868 MHz section is spatial work that has to be done on a canvas
 and looked at; emitting coordinates blind would produce files that look orderable and give you a
 radio transmitting into a mismatched trace. The RF section in particular is copied from TI's
@@ -20,7 +20,8 @@ So: three documents a person can lay out from, and a BOM they can order against.
 | [`SCHEMATIC.md`](SCHEMATIC.md) | every net and pin, with what is unverified stated at the end |
 | [`PINOUT.md`](PINOUT.md) | all 64 pins, transcribed from the package drawing |
 | [`RF.md`](RF.md) | the 868 MHz section, values from TI's reference design |
-| [`uflowmeter.net`](uflowmeter.net) | KiCad netlist — imports into pcbnew with footprints and ratsnest |
+| [`uflowmeter.kicad_pcb`](uflowmeter.kicad_pcb) | the board — 54 footprints placed, DRC clean, unrouted |
+| [`uflowmeter.net`](uflowmeter.net) | the netlist it was built from |
 | [`bom.csv`](bom.csv) | JLCPCB BOM — LCSC numbers, tiers, notes |
 | [`LAYOUT.md`](LAYOUT.md) | stackup, the three sections, design rules |
 
