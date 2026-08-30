@@ -58,8 +58,12 @@ expect to move things.
    `CC1101EM_868_915MHz_LAYOUT_3_0_0.pdf` component for component, then J2 at the board edge. Do
    not let this block be reshaped to fit — reshape everything else around it.
 
-Then the cheap stuff: Q1 beside J3, SW1 where a finger reaches it, J1 and J5 anywhere convenient on
-the edge, C1 at the cell terminals.
+Then the cheap stuff: Q1 beside the display net, SW1 where a finger reaches it, J1 and J5 anywhere
+convenient on the edge, C1 at the cell terminals.
+
+**J3 is on the back**, so the display module mounts on the reverse side facing out. Its body has to
+clear every through-hole pin that protrudes there — `J1`, `J4`, `J5`, `BT1` — and stay off the
+radio. Thirty-seven positions satisfy all of that; the one used is pin 1 at (43.5, 20.5).
 
 ## Stackup
 

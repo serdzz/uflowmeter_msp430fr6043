@@ -165,9 +165,21 @@ The SSD1306 module is bought as a module and plugged in, not assembled here.
   push current through its protection diodes — invisible on a bench supply and fatal to a ten-year
   battery.
 * **C18** — 1 µF `0603` on `VCC_DISP`.
-* **J3** — 4-pin 2.54 mm: **1 `GND`, 2 `VCC_DISP`, 3 `I2C_SCL`, 4 `I2C_SDA`.**
+* **J3** — 4-pin 2.54 mm, **on the back of the board**: 1 `GND`, 2 `VCC_DISP`, 3 `I2C_SCL`,
+  4 `I2C_SDA`, in a row along +x at y = 20.5 mm.
 
-  That order is the module's, read off the silkscreen of the actual part: `GND VCC SCL SDA`. It was
+  The module mounts on the reverse side, facing out, and plugs straight in — no flying leads. Its
+  27 × 27 mm body then occupies x 33.8…60.8, y 20.5…47.5 on the back, which was chosen rather than
+  guessed: it clears the through-hole pins of `J1`, `J4`, `J5` and `BT1`, all of which protrude on
+  that side, and it stays off the radio, since a module with its own ground plane and a charge pump
+  sitting over the 868 MHz balun would detune it.
+
+  **Check the mating before ordering.** The order `GND VCC SCL SDA` is the module's, read off the
+  silkscreen of the actual part. But a header on the back reads mirrored from the front, and which
+  way round the module then seats depends on which side its body hangs — that is the kind of thing
+  that is obvious with the part in your hand and easy to get backwards on a screen.
+
+  It was
   the other way round in the first draft, which would have put the supply across the module
   backwards the first time anyone plugged it in. Both orders exist in the wild, so this one is
   worth checking against the module in hand rather than against habit.
