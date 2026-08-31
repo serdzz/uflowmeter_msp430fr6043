@@ -4,7 +4,7 @@
   (comp (ref "U1") (value "MSP430FR5043IRGC") (footprint "Package_DFN_QFN:QFN-64-1EP_9x9mm_P0.5mm_EP5.45x5.45mm"))
   (comp (ref "Q1") (value "IRLML6401") (footprint "Package_TO_SOT_SMD:SOT-23"))
   (comp (ref "D1") (value "Schottky") (footprint "Diode_SMD:D_SOD-123"))
-  (comp (ref "SW1") (value "Button") (footprint "Button_Switch_SMD:SW_Push_1P1T_NO_CK_KSC7xxJ"))
+  (comp (ref "SW1") (value "Button") (footprint "Button_Switch_SMD:SW_SPST_SKQG_WithoutStem"))
   (comp (ref "Y1") (value "32.768kHz") (footprint "Crystal:Crystal_SMD_3215-2Pin_3.2x1.5mm"))
   (comp (ref "Y2") (value "8MHz") (footprint "Crystal:Crystal_SMD_5032-2Pin_5.0x3.2mm"))
   (comp (ref "J1") (value "SBW") (footprint "Connector_PinHeader_1.27mm:PinHeader_1x04_P1.27mm_Vertical"))

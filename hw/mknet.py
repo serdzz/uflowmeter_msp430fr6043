@@ -21,7 +21,9 @@ FP = {
  'h3':    'Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical',
  'h2':    'Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical',
  'h4s':   'Connector_PinHeader_1.27mm:PinHeader_1x04_P1.27mm_Vertical',
- 'sw':    'Button_Switch_SMD:SW_Push_1P1T_NO_CK_KSC7xxJ',
+  # ALPS SKQG, which JLCPCB stocks in quantity and KiCad already has a checked footprint for.
+ # The CK KSC7xx that was here has no stocked equivalent, so the button would never be placed.
+ 'sw':    'Button_Switch_SMD:SW_SPST_SKQG_WithoutStem',
  'd':     'Diode_SMD:D_SOD-123',
 }
 

@@ -59,7 +59,7 @@ ROUTES = [
  # BUTTON and I2C_SCL likewise: adjacent pins, so BUTTON fans out before it turns.
  ('BUTTON',   [(38.25,30.44,F),(38.25,31.60,F),(39.50,32.40,F),(39.50,34.50,F),
                (39.50,34.50,B),(43.52,34.50,B),(43.52,34.50,F),(43.52,36.00,F)]),
- ('BUTTON',   [(43.52,34.50,B),(48.90,34.50,B),(48.90,34.50,F),(48.90,39.00,F)]),
+ ('BUTTON',   [(43.52,34.50,B),(48.70,34.50,B),(48.70,34.50,F),(48.70,39.15,F)]),
  # UART_RX leaves the pin next to UART_TX, so it fans out too, and comes at J5 from the left --
  # a run straight down x=62 would cross the pin above it.
  ('UART_RX',  [(41.75,30.44,F),(41.75,31.60,F),(42.50,32.40,F),(42.50,46.50,F),
@@ -84,6 +84,13 @@ ROUTES = [
  # DVCC3 sits between DISP_GATE's fan and the PVCC decoupling, and the stitcher's stub kept being
  # cleaned away. Its own escape and via, placed where nothing else wants to be.
  ('VCC',      [(41.75,21.56,F),(41.75,19.50,F),(41.75,19.50,B)]),
+ # RST also has to reach the debug header. It cannot run along y=26 on the top layer -- J1's TEST
+ # pin is in the way -- so it carries on west underneath and comes up outside the connector.
+ ('RST',      [(16.50,28.40,B),(8.54,28.40,B),(8.54,28.40,F),(8.54,26.00,F)]),
+ # The button's footprint carries a keepout on the top layer: there is a metal dome under it and
+ # copper there would short against it. BAT+ passes underneath on the bottom layer instead, which
+ # the keepout does not forbid, and comes up west of the switch.
+ ('BAT+',     [(62.00,38.00,B),(45.65,38.00,B),(45.65,38.00,F),(45.65,50.00,F)]),
 ]
 
 def strip(board, names):
