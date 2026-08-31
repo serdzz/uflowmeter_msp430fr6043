@@ -25,6 +25,45 @@ Expect roughly **1.5 µA** with no firmware running — the MSP430 in reset.
 supply, `RST`, `TEST`, and the core — and `RST` is worth naming, because it reached J1 only by
 accident until late in the layout and is now routed explicitly.
 
+### The MSP-FET430UIF works, and is the better tool here
+
+TI's *MSP Debuggers* guide (SLAU647O, Table 1) marks the MSP-FET430UIF as supporting **all
+programmable MSP430 and CC430 devices**, over 4-wire JTAG and 2-wire Spy-Bi-Wire, with an
+adjustable target supply. The FR5043 is inside that.
+
+Do not confuse it with the **MSP-FET430PIF**, the parallel-port one, which the same table footnotes
+as *"legacy device support only — does not support any devices released after 2011."*
+
+**Its linear regulator is a reason to prefer it over the current MSP-FET**, not a sign of its age.
+The guide says so directly: the MSP-FET and eZ-FET use a DC-DC converter that puts 5–50 mV of
+ripple at 1–50 kHz on the target supply, and for sensitive analog and RF circuits it recommends an
+emulator with an integrated linear regulator — naming the MSP-FET430UIF. This board has an
+ultrasonic front end measuring picoseconds and a radio on the same rail.
+
+| MSP-FET 14-pin | | J1 |
+| --- | --- | --- |
+| 11 `SBWTDIO` | → | 3 `RST` |
+| 13 `SBWTCK` | → | 4 `TEST` |
+| 9 `GND` | → | 2 `GND` |
+| 4 `VCC_TARGET` | → | 1 `VCC` |
+
+Use pin 4 (sense) with the board on a bench supply. Pin 2 (`VCC_TOOL`) would power the board from
+the probe, which is convenient later and wrong for a first power-up — a fault should show as a
+current limit, not as smoke.
+
+**What it does not have**, and what that costs here:
+
+* **No backchannel UART.** The calibration interface on J5 is a plain 3.3 V UART, and a current
+  MSP-FET would carry it over the same cable. With the UIF you need a separate USB-serial adapter.
+* **No EnergyTrace.** Not much of a loss: its resolution would not settle a 5.7 µA budget anyway.
+  The leakage measurement in step 5 wants a source-meter, not a debug probe.
+* **No BSL mode.** Irrelevant while J1 is fitted.
+
+Two practical notes from the same guide. **Update its firmware through a direct USB port, not a
+hub** — the update can fail through one, and a UIF this old will almost certainly ask for an update
+the first time a current CCS sees it. And **never pull the USB or JTAG cable during a live debug
+session**; terminate it first, or the target can be left drawing current.
+
 **2. The 32.768 kHz crystal.** Confirm it starts. If it does not, the load capacitors are the first
 suspect: `C6`/`C7` are 18 pF, chosen from a nominal 12.5 pF `C_L`, and want confirming against the
 crystal actually fitted. See `LAYOUT.md`.
