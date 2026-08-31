@@ -7,7 +7,9 @@ Design documents for the meter's PCB, aimed at JLCPCB.
 **It is** a specified circuit: every net, a bill of materials with real LCSC part numbers checked
 against JLCPCB's assembly library, and the layout constraints that decide whether it works.
 
-**It is not a board you can order.** It is placed but not routed, so there are no Gerbers. Placing and
+**It is a board you can order.** Routed, DRC clean, with the Gerbers, drill files, BOM and
+placement list in `fab/`. Whether it *works* is a different question — see the end of
+[`LAYOUT.md`](LAYOUT.md) for what has still never been tested. Placing and
 routing a mixed-signal board with an 868 MHz section is spatial work that has to be done on a canvas
 and looked at; emitting coordinates blind would produce files that look orderable and give you a
 radio transmitting into a mismatched trace. The RF section in particular is copied from TI's

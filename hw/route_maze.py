@@ -106,6 +106,23 @@ def cells_of(pad):
 
 VIA_CELLS = int((0.3 + 0.15)/GRID) + 1
 
+# Tried and rejected: keeping vias out of the fence of pads around a fine-pitch package, on the
+# reasoning that a via dropped right behind one pin sits in the next pin's only corridor. It
+# reads well and measures badly -- 10 unconnected against 6 -- because the escape then has to
+# run far enough on the top layer to leave the fence, and the top layer is where the congestion
+# already is. Kept here, unused, so the idea is not had twice.
+NOVIA = []
+for fp in board.Footprints():
+    if len(list(fp.Pads())) > 16:
+        bb = fp.GetBoundingBox()
+        NOVIA.append((int((pcbnew.ToMM(bb.GetLeft()   - X0) - 1.2)/GRID),
+                      int((pcbnew.ToMM(bb.GetRight()  - X0) + 1.2)/GRID),
+                      int((pcbnew.ToMM(bb.GetTop()    - Y0) - 1.2)/GRID),
+                      int((pcbnew.ToMM(bb.GetBottom() - Y0) + 1.2)/GRID)))
+
+def in_fence(x, y):
+    return any(x0 <= x <= x1 and y0 <= y <= y1 for x0, x1, y0, y1 in NOVIA)
+
 def via_ok(x, y, netcode):
     for li in (0,1):
         for dy in range(-VIA_CELLS, VIA_CELLS+1):

@@ -1,4 +1,4 @@
-"""Remove whatever DRC objects to.
+"""Remove whatever DRC objects to. One pass; exits 1 if it changed anything, 0 when clean.
 
 The routers model clearance as inflated rectangles on a grid, which is close to KiCad's own
 computation but not identical to it. Where the two disagree, KiCad is right: this drops the
@@ -7,13 +7,13 @@ fails its own rule check."""
 import sys, json, subprocess, re, pcbnew
 
 BRD = sys.argv[1]
-for attempt in range(6):
+if True:
     subprocess.run(['kicad-cli','pcb','drc','--output','/tmp/_cl.json','--format','json',
                     '--severity-error', BRD], capture_output=True)
     v = json.load(open('/tmp/_cl.json')).get('violations', [])
     bad = [x for x in v if x['type'] in ('clearance','shorting_items','track_width','hole_clearance')]
     if not bad:
-        print(f"clean after {attempt} pass(es)"); break
+        print("clean"); raise SystemExit(0)
     kill = set()
     for x in bad:
         for i in x.get('items', []):
@@ -25,7 +25,7 @@ for attempt in range(6):
                 kill.add((m.group(1), m.group(2), round(float(m.group(3)), 4),
                           round(pos.get('x', -1e9), 3), round(pos.get('y', -1e9), 3)))
     if not kill:
-        print(f"{len(bad)} violations left that are not tracks"); break
+        print(f"{len(bad)} violations left that are not tracks"); raise SystemExit(0)
     b = pcbnew.LoadBoard(BRD)
     removed = 0
     for t in list(b.Tracks()):
@@ -39,4 +39,7 @@ for attempt in range(6):
             b.Remove(t); removed += 1
     pcbnew.ZONE_FILLER(b).Fill(b.Zones())
     b.Save(BRD)
-    print(f"  pass {attempt+1}: removed {removed} tracks for {len(bad)} violations")
+    print(f"  removed {removed} tracks for {len(bad)} violations")
+    # One pass per process: pcbnew does not survive a second LoadBoard in the same interpreter,
+    # so the shell repeats this rather than a loop in here.
+    raise SystemExit(1)

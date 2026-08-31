@@ -93,6 +93,10 @@ def pour(layer, netname, inset=0.3):
     # Solid, not thermal relief. A QFN's ground pads have no room for spokes -- DRC calls that a
     # starved thermal -- and thermal relief under an RF ground is bad practice anyway.
     z.SetPadConnection(pcbnew.ZONE_CONNECTION_FULL)
+    # Drop copper that ends up orphaned. Routing chops the outer pours into islands, and an
+    # island with nothing tying it to the rest is not a ground plane -- it is a floating patch
+    # of metal, which is worse than bare laminate next to a radio.
+    z.SetIslandRemovalMode(pcbnew.ISLAND_REMOVAL_MODE_ALWAYS)
     z.SetLocalClearance(MM(0.2))
     z.SetMinThickness(MM(0.15))
     board.Add(z); return z

@@ -9,11 +9,14 @@ python3 mknet.py uflowmeter.net
 python3 mksch.py uflowmeter.net uflowmeter.kicad_sch
 
 $K mkboard.py     uflowmeter.net "$B"
+# The six the router cannot reach go down first, on an empty board, so they get the corridors --
+# and before the supply stitching, so that avoids them rather than the other way round.
+$K route_by_hand.py "$B"
 $K stitch_vcc.py  "$B" VCC
 $K route_maze.py  "$B" fat
-$K route_cleanup.py "$B"
+for i in 1 2 3 4; do $K route_cleanup.py "$B" || continue; break; done
 $K route_escape.py  "$B"
-$K route_cleanup.py "$B"
+for i in 1 2 3 4; do $K route_cleanup.py "$B" || continue; break; done
 $K finish_board.py  "$B"
 ./make_fab.sh
 kicad-cli pcb drc --output /tmp/build_drc.json --format json --severity-error "$B" \

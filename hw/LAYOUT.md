@@ -261,28 +261,38 @@ python3 finish_board.py  uflowmeter.kicad_pcb
 
 using KiCad's own Python, which is the only one carrying `pcbnew`.
 
-## It is not orderable yet
+## It is routed
 
-**32 connections are missing.** A bare board would be manufacturable and wrong.
+**Zero DRC violations, zero unconnected items, ERC clean.** 32 footprints, 222 tracks, 89 vias, on
+70.1 × 55.1 mm of four-layer board.
 
-**Fifteen of them are the RF chain.** `route_rf.py` gets two hops of eighteen: the shunt parts sit
-across the straight line between the series ones, and moving them to make room means choosing a
-geometry, which is the one thing that must not be chosen freely here. The values are only correct
-together with TI's layout, and that layout is in the SWRR045 archive as CADSTAR and Gerbers —
-readable by a person, not by a script. **Transplant it.**
+Getting the last connections in took a rule that is worth stating once, because it caused every
+failure at the end:
 
-**Seventeen are signals**, on fifteen nets: `CH0`, `I2C_SCL`, the `SPI` group, `XOSC_Q1`/`Q2`,
-`USSXTIN`/`USSXTOUT`, `RADIO_CS`, `RADIO_DCOUPL`, `RADIO_RBIAS`, `TEST`, `UART_TX`. Almost all are
-the last pins of the two QFNs, where the room runs out. They need a router that can push and shove
-what is already laid; these only ever add. That is half an hour in KiCad's interactive router.
+> A 0.6 mm via needs **0.525 mm** of clear board to a foreign track — its own radius, plus the
+> clearance, plus the other track's half width. Escapes from adjacent pins of a 0.5 mm pitch
+> package run 0.5 mm apart. That is always a hair too close.
 
-### Three things tried that did not help, so nobody tries them again
+So a via never goes directly behind a pin. One of each adjacent pair fans sideways first — which is
+the standard fine-pitch escape, and here it was needed four times: `I2C_SCL`/`BUTTON`,
+`DISP_GATE`/`RADIO_CS`, `UART_TX`/`UART_RX`, and `USSXTIN`/`USSXTOUT`.
 
-* **Reordering the nets.** Six orderings, 23 to 36 connections, and the one already in use was
-  best. Routing the hardest nets first — the obvious idea — scored 33.
-* **Unbounding the search.** The router confines each search to its net's box plus a margin.
-  Widening that from 12 mm to 30 mm changed the result by exactly nothing: 36 connections either
-  way. The bound was never the limit.
-* **A second and third pass.** Identical output, plus duplicate copper.
+The nets the grid router could not reach are in [`route_by_hand.py`](route_by_hand.py) as explicit
+waypoints, under a discipline that makes crossings impossible rather than unlikely: **verticals on
+the top layer, horizontals on the bottom, a via at every corner, a lane of its own for each net.**
+Two verticals cannot meet — their x differs. Two horizontals cannot meet — their y differs. A
+vertical and a horizontal are on different layers. Drawn by eye instead, the same routes produced
+seven crossings.
 
-What is left is congestion, and congestion wants rip-up.
+### What still has to be true before it works
+
+Ordering it is not the same as it working. Unchanged from the rest of this repository:
+
+* **Nothing has been near a transducer, a pipe or a battery.** No instrument has been calibrated;
+  `legal::params` still holds nominal geometry.
+* **What sits between `CH0`/`CH1` and the transducers is not designed.** The pins and their power
+  domain are specified; matching, bias and protection are not, and depend on transducers nobody has
+  chosen. J4 brings them to a header so that can be worked out on the bench.
+* **The radio module must meet the three conditions in [`RF.md`](RF.md)** — 868 MHz, no power LED,
+  no regulator with a quiescent current worth speaking of.
+* **The FR5043's stock at JLCPCB was 133 pieces.** Check it before committing to an order.

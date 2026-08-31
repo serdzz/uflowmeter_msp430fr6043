@@ -61,4 +61,9 @@ PY
 # not .gbr, so a wildcard on .gbr silently ships an archive with only the drill files in it.
 ( cd "$OUT" && zip -q uflowmeter-jlcpcb.zip \
     *.gtl *.gbl *.g1 *.g2 *.gts *.gbs *.gto *.gbo *.gm1 *.gtp *.gbp *.drl )
-echo "wrote $OUT/uflowmeter-jlcpcb.zip plus the BOM and placement files"
+# The schematic as a PDF, so the folder is a complete handover and not just machine files.
+kicad-cli sch export pdf --output "$OUT/uflowmeter-schematic.pdf" uflowmeter.kicad_sch >/dev/null
+kicad-cli sch erc --output "$OUT/erc.json" --format json --severity-error uflowmeter.kicad_sch \
+  | grep -E "violations" | sed 's/^/  ERC: /'
+
+echo "wrote $OUT/uflowmeter-jlcpcb.zip plus the BOM, placement and schematic"
