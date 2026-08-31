@@ -164,6 +164,46 @@ What has to change, all of it in the driver's `Config`:
 You also need **wedges** — usually acrylic — to set the refraction angle, and couplant. Without the
 wedges the beam does not enter the water at a useful angle at all.
 
+#### Whether it will work at all at 3.6 V
+
+TI's whole FR6043 ecosystem is aimed at **wetted** transducers. The EVM430-FR6043 ships without any
+— *"connector available to interface with different transducer types"* — and TI's water reference
+designs are inline. Clamp-on is not a case they address.
+
+The reason to expect trouble is the drive. This excitation stage runs from **the same 3.6 V rail as
+everything else**, while commercial clamp-on meters hit the transducer with tens of volts, precisely
+to cover the 20–40 dB lost in two pipe walls and a couplant layer. That headroom is not available
+here.
+
+So it may simply not lift the echo out of the noise, and that would be a shortage of energy rather
+than a setting to find. `uss_scope` answers it cheaply: a flat line with the gain up and the
+excitation pulses increased is the answer.
+
+#### If you try it anyway
+
+* **A TUF-2000-style TS-2 pair** — 1 MHz, for DN15–100, sold with clamps and cable, and cheap. The
+  right frequency and the right pipe range.
+* **NDT angle-beam probes**, 1 or 2 MHz on an acrylic wedge. Better made, dearer, and built for
+  exactly this job of getting a beam into a wall at an angle.
+
+Both are designed to be driven by a high-voltage pulser, which is the doubt above.
+
+#### What to buy to bring the front end up
+
+**Wetted, 1 MHz, in a simple fixture** — a length of pipe with two transducers bonded at an angle,
+or a bought spool piece. Two reasons: it is what the silicon is for, so the signal arrives with
+margin and you spend the time on the correlation and the threshold rather than on whether there is
+an echo at all; and it is what the instrument becomes, since the geometry can then be measured once,
+written into `params` and sealed.
+
+**1 MHz matches the firmware.** `Params::default()` holds `excitation_hz: 1_000_000`. A different
+frequency is parameter 6 — `W 6 <hertz>` over J5.
+
+**One thing to ask the supplier, because it is not written down anywhere here:** the pair's impedance
+and capacitance, and whether it is meant to be excited by a logic-level driver rather than a 50 V
+pulser. The FR6043's output stage was never checked against a specific transducer in this design,
+and TI does not name models in its public material.
+
 **But not for a billing instrument, and the reason is not signal quality.** This firmware is built
 for MID and WELMEC 7.2, where the instrument must be sealed and its metrological characteristics
 verifiable. A clamp-on measurement depends on things that are not part of the instrument and cannot
