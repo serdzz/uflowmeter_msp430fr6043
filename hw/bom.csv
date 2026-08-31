@@ -6,7 +6,8 @@ IRLML6401,Q1,SOT-23,C382329,extended,"P-channel; gate LOW = display ON"
 B5819W,D1,SOD-123,C8598,BASIC,"Schottky; drops the fresh cell below the MCU's 3.6 V maximum"
 100uF 6.3V,C1,0805,C141660,extended,across the cell
 10uF,C2,0603,C19702,BASIC,"at J6 -- sources the radio's 35 mA pulse"
-100nF,"C3,C4,C10,C19,C20,C21",0402,C1525,BASIC,"decoupling; C20/C21 at the PVCC pins; C10 on RST"
+100nF,"C3,C4,C10,C19",0402,C1525,BASIC,"decoupling; C10 on RST"
+1uF,"C20,C21",0402,C52923,BASIC,"PVCC -- see BRINGUP.md: 100nF is too light for the excitation burst"
 1uF,C18,0603,C15849,BASIC,VCC_DISP
 18pF,"C6,C7",0402,C106202,extended,"Y1 load -- confirm against Y1's C_L, see LAYOUT.md"
 18pF,"C8,C9",0402,C106202,extended,"Y2 load -- confirm against Y2's C_L"

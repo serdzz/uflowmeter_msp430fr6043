@@ -199,10 +199,61 @@ written into `params` and sealed.
 **1 MHz matches the firmware.** `Params::default()` holds `excitation_hz: 1_000_000`. A different
 frequency is parameter 6 — `W 6 <hertz>` over J5.
 
-**One thing to ask the supplier, because it is not written down anywhere here:** the pair's impedance
-and capacitance, and whether it is meant to be excited by a logic-level driver rather than a 50 V
-pulser. The FR6043's output stage was never checked against a specific transducer in this design,
-and TI does not name models in its public material.
+#### Two that fit, with numbers
+
+TI lists **AUWE-3P-FLOWSENSORPIPE** from Audiowell on its own site as working with the
+EVM430-FR6043 — a complete spool piece, transducers already fitted, DN15/20/25. Two variants:
+
+| | **HS0016** polymer | **HS0002** brass |
+| --- | --- | --- |
+| Resonant frequency | 1090 ± 25 kHz | 975 ± 30 kHz |
+| Resonant impedance | 25–75 Ω | ≤ 110 Ω |
+| Capacitance | 1130 pF ±20% | 1350 pF ±20% |
+| Receiving signal | ≥ 350 mV | — |
+| Water temperature | +0.1…+90 °C | +5…+55 °C |
+| Pressure | 2.5 MPa | 1.6 MPa |
+| Size | DN20, G1, 130 mm | DN20 |
+| Flow | — | Q₁ 0.05, Q₃ 2.5, Q₄ 5.0 m³/h |
+
+Both use a U-type reflecting path, both are around 1 MHz, and the polymer one is on an
+NSF-approved material for potable water.
+
+**They answer the drive question.** Audiowell's bare US0078 gives *"allowable max input voltage:
+5 Vp-p"* — these are made to be excited at logic level, not by a 50 V pulser. That was the doubt
+hanging over the whole front end, and it is settled: a 3.6 V rail is inside what they expect. A
+receiving signal of 350 mV is generous next to the ADC's range, too.
+
+**The frequency follows the transducer, not the other way round.** `Params::default()` holds
+1 000 000 Hz because that was a guess with no hardware. With an HS0016 it becomes `W 6 1090000`,
+with an HS0002 `W 6 975000`.
+
+#### What their impedance says about this board
+
+Worth working out before the first burst, because it points at a component value that may be wrong.
+
+At resonance the transducer looks largely resistive — 50 Ω for the HS0016. Driven from 3.6 V that is
+**72 mA**, and over ten excitation cycles it asks about **760 nC** of the `PVCC` rail.
+
+`C20` and `C21` hold that rail up, and they are **100 nF**:
+
+| PVCC decoupling | Droop over one burst |
+| --- | ---: |
+| 100 nF (as fitted) | **7.6 V** — impossible, so the rail collapses and the drive weakens |
+| 1 µF | 0.76 V |
+| 10 µF | 0.08 V |
+
+The first row cannot happen literally; what happens instead is that the supply sags, the excitation
+comes out smaller than intended, and the echo is weaker than it should be — which reads as a
+transducer problem rather than a decoupling one.
+
+**`C20` and `C21` are 0402, and 1 µF exists in 0402.** Fitting 1 µF instead of 100 nF is a
+part-number change, not a board change. Do that before the first burst, and put a scope on `PVCC`
+during one: if it still sags, the answer is bulk, and 10 µF wants a footprint the next revision
+should carry.
+
+This is an estimate from the transducer's published impedance, not a measurement — the driver's own
+output impedance limits the current too, and this design never loaded the factory drive-strength
+trims from the `TLV` table. But the direction is not in doubt, and 100 nF is light.
 
 **But not for a billing instrument, and the reason is not signal quality.** This firmware is built
 for MID and WELMEC 7.2, where the instrument must be sealed and its metrological characteristics
