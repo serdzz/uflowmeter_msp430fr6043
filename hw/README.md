@@ -68,6 +68,24 @@ What it costs: unit price at volume, and a dependency on a module that must be 8
 power LED, and must have no regulator with a quiescent current worth speaking of. See
 [`RF.md`](RF.md); an LED alone would be two hundred times this instrument's whole budget.
 
+## What the assembly house places, and what you do
+
+**22 parts on 13 lines** carry LCSC numbers and are assembled: the MCU, the MOSFET, both crystals,
+the Schottky and every passive.
+
+**7 parts are fitted by hand** — all five headers, the cell terminals and the button. The headers
+are through-hole and normally hand-soldered anyway; the button's footprint is a CK KSC7xx, 5.8 × 4 mm
+on four pads, and JLCPCB stocks 4.5 × 4.5 mm parts that will not sit on it. Pick a stocked switch at
+order time and the footprint can be swapped to match.
+
+Two things that will otherwise be found by the assembly house rather than by you, and which
+`make_fab.sh` now checks before writing anything:
+
+* **Fiducials must not appear in the placement file.** They are copper marks, not parts, and a house
+  that is asked to place FID1 will write and ask what it is.
+* **Every designator in the placement file needs a line in the BOM.** `BT1` lost its line when the
+  BOM was rewritten for the radio module, and nothing noticed until the order was uploaded.
+
 ## Cost
 
 | | |

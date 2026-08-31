@@ -37,10 +37,11 @@ rows = list(csv.DictReader(open(src)))
 with open(src, 'w', newline='') as f:
     w = csv.writer(f)
     w.writerow(['Designator', 'Mid X', 'Mid Y', 'Layer', 'Rotation'])
-    for r in rows:
+    placed = [r for r in rows if not r['Ref'].startswith('FID')]
+    for r in placed:
         w.writerow([r['Ref'], r['PosX'], r['PosY'],
                     'top' if r['Side'] == 'top' else 'bottom', r['Rot']])
-print(f"  placement: {len(rows)} parts")
+print(f"  placement: {len(placed)} parts ({len(rows) - len(placed)} fiducials left out)")
 
 # The BOM JLCPCB reads: one line per value, designators joined, LCSC number in its own column.
 import collections
@@ -55,6 +56,20 @@ with open('fab/uflowmeter-bom.csv', 'w', newline='') as f:
     for (c, fp, lcsc), des in bom.items():
         w.writerow([c, ','.join(des), fp, lcsc])
 print(f"  bom: {len(bom)} lines")
+
+# The two files have to name the same parts. A designator in the placement file with no BOM line
+# is what makes an assembly house stop and write to you.
+cpl_refs = {r['Ref'] for r in placed}
+bom_refs = set()
+for _, des in bom.items():
+    bom_refs |= {d.strip() for d in des if d.strip()}
+missing = sorted(cpl_refs - bom_refs)
+extra   = sorted(bom_refs - cpl_refs)
+if missing or extra:
+    if missing: print(f"  ERROR: placed but not in the BOM: {missing}")
+    if extra:   print(f"  ERROR: in the BOM but not placed: {extra}")
+    raise SystemExit(1)
+print("  placement and BOM name the same parts")
 PY
 
 # KiCad names the Gerbers by layer -- .gtl .gbl .g1 .g2 .gts .gbs .gto .gbo .gm1 .gtp .gbp --

@@ -3,18 +3,19 @@ MSP430FR5043IRGCR,U1,VQFN-64-EP(9x9),C1850128,extended,"stock was 133 -- check b
 IRLML6401,Q1,SOT-23,C382329,extended,"P-channel; gate LOW = display ON"
 32.768kHz 12.5pF,Y1,SMD3215-2P,C32346,BASIC,Epson Q13FC13500004
 8MHz,Y2,SMD5032-2P,C115962,BASIC,"USS reference -- sets the measurement; must be a crystal"
-Schottky 40V,D1,SOD-123,,,"optional; 0R link if omitted"
-100uF 6.3V,C1,0805,,BASIC,across the cell
-10uF,C2,0603,,BASIC,"at J6 -- sources the radio's 35 mA pulse"
-100nF,"C3,C4,C10,C19,C20,C21",0402,,BASIC,"decoupling; C20/C21 at the PVCC pins; C10 on RST"
-1uF,C18,0603,,BASIC,VCC_DISP
-Y1 load,"C6,C7",0402,,BASIC,"value per Y1 C_L -- see LAYOUT.md"
-Y2 load,"C8,C9",0402,,BASIC,value per Y2 C_L
-47k,R1,0402,,BASIC,reset pull-up
-1M,R2,0402,,BASIC,"gate pull-up -- NOT optional"
-4.7k,"R3,R4",0402,,BASIC,"I2C pull-ups to VCC_DISP only"
-Header 2.54mm 8p,J6,,,,"radio module: GND VCC GDO0 CSN SCK MOSI GDO2 MISO"
-Header 1.27mm 4p,J1,,,,"Spy-Bi-Wire: VCC,GND,SBWTDIO,SBWTCK"
-Header 2.54mm 4p,"J3,J4",,,,"J3 = GND VCC SCL SDA, matching the module silkscreen"
-Header 2.54mm 3p,J5,,,,"calibration UART: GND,TX,RX"
-Tactile switch,SW1,,,,button
+B5819W,D1,SOD-123,C8598,BASIC,"Schottky; drops the fresh cell below the MCU's 3.6 V maximum"
+100uF 6.3V,C1,0805,C141660,extended,across the cell
+10uF,C2,0603,C19702,BASIC,"at J6 -- sources the radio's 35 mA pulse"
+100nF,"C3,C4,C10,C19,C20,C21",0402,C1525,BASIC,"decoupling; C20/C21 at the PVCC pins; C10 on RST"
+1uF,C18,0603,C15849,BASIC,VCC_DISP
+18pF,"C6,C7",0402,C106202,extended,"Y1 load -- confirm against Y1's C_L, see LAYOUT.md"
+18pF,"C8,C9",0402,C106202,extended,"Y2 load -- confirm against Y2's C_L"
+47k,R1,0402,C25792,BASIC,reset pull-up
+1M,R2,0402,C26083,BASIC,"gate pull-up -- NOT optional"
+4.7k,"R3,R4",0402,C25900,BASIC,"I2C pull-ups to VCC_DISP only"
+Header 2.54mm 8p,J6,,,,"radio module: GND VCC GDO0 CSN SCK MOSI GDO2 MISO -- hand fit"
+Header 1.27mm 4p,J1,,,,"Spy-Bi-Wire: VCC,GND,SBWTDIO,SBWTCK -- hand fit"
+Header 2.54mm 4p,"J3,J4",,,,"J3 = GND VCC SCL SDA, matching the module silkscreen -- hand fit"
+Header 2.54mm 3p,J5,,,,"calibration UART: GND,TX,RX -- hand fit"
+Header 2.54mm 2p,BT1,,,,"cell terminals: + and - -- hand fit"
+Tactile switch,SW1,,,,"hand fit, or pick a stocked one at order time"
