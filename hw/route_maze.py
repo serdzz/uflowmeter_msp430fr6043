@@ -75,9 +75,16 @@ for fp in board.Footprints():
         paint(p.GetBoundingBox(), p.GetNetCode(), lay, grow=0.0, force=True)
 
 pads = collections.defaultdict(list)
+FINE = set()          # pads on a package dense enough that each pin has one way out
 for fp in board.Footprints():
+    dense = len(list(fp.Pads())) > 16
     for p in fp.Pads():
         if p.GetNetname(): pads[p.GetNetname()].append(p)
+        if dense: FINE.add((fp.GetPosition().x, fp.GetPosition().y, p.GetNumber()))
+
+def fine_pins(plist):
+    return sum(1 for p in plist
+               if (p.GetParent().GetPosition().x, p.GetParent().GetPosition().y, p.GetNumber()) in FINE)
 
 DIRS = [(1,0,10),(-1,0,10),(0,1,10),(0,-1,10),(1,1,14),(1,-1,14),(-1,1,14),(-1,-1,14)]
 
@@ -111,7 +118,7 @@ def via_ok(x, y, netcode):
                 if owner[li][base+xx] not in (0, netcode): return False
     return True
 
-def route(sources, targets, netcode):
+def route(sources, targets, netcode, margin=12.0):
     """multi-source A* to the nearest target cell"""
     tset = set(targets)
     if not tset: return None
@@ -122,8 +129,10 @@ def route(sources, targets, netcode):
         dx,dy = abs(x-tx), abs(y-ty)
         return int(12*max(dx,dy) + 5*min(dx,dy))
 
-    # and it never needs to look far outside the box the net lives in
-    MARG = int(12.0/GRID)
+    # Normally the path stays near the net's own box, and bounding the search there is what makes
+    # a 0.05 mm grid affordable. But a detour round congestion can go a long way outside it, so
+    # the caller gets to widen the box and try again.
+    MARG = int(margin/GRID)
     axs=[c[0] for c in sources]+[t[0] for t in targets]
     ays=[c[1] for c in sources]+[t[1] for t in targets]
     lox, hix = min(axs)-MARG, max(axs)+MARG
@@ -190,6 +199,8 @@ def commit(path, net):
 # A greedy router spends whatever space it is given, so the order it takes the nets in changes
 # the result more than any of its costs do. The driver tries several and keeps the best.
 ORDER = sys.argv[2] if len(sys.argv) > 2 else 'fat'
+try:    HARD = set(open('/tmp/hard.txt').read().split())
+except Exception: HARD = set()
 
 def span(kv):
     xs=[p.GetPosition().x for p in kv[1]]; ys=[p.GetPosition().y for p in kv[1]]
@@ -201,9 +212,16 @@ KEYS = {
  'short': lambda kv:  span(kv),            # tightest nets first
  'long':  lambda kv: -span(kv),
  'name':  lambda kv:  kv[0],
+ # Hardest first. A pin on a 0.5 mm pitch package has exactly one way out, and whoever routes
+ # second finds it taken; the nets that fail are always the ones left holding those pins.
+ 'tight': lambda kv: (-fine_pins(kv[1]), span(kv)),
+ # Nets named in /tmp/hard.txt go first. The list comes from a trial pass: whichever nets it
+ # failed on are the ones that needed the room, so on the second pass they get it.
+ 'hard':  lambda kv: (0 if kv[0] in HARD else 1, -len(kv[1])),
 }
 
 done=fail=links=0
+FAILED=set()
 for netname, plist in sorted(pads.items(), key=KEYS[ORDER]):
     if netname in SKIP or len(plist) < 2: continue
     net = plist[0].GetNet(); nc = net.GetNetCode()
@@ -214,8 +232,11 @@ for netname, plist in sorted(pads.items(), key=KEYS[ORDER]):
         if connected & set(tgt): connected |= set(tgt); continue
         p = route(connected, tgt, nc)
         if p is None:
+            # give it the whole board before giving up
+            p = route(connected, tgt, nc, margin=30.0)
+        if p is None:
             # one unreachable pad must not abandon the other eleven
-            ok=False; continue
+            ok=False; FAILED.add(netname); continue
         commit(p, net)
         links += 1
         connected |= set(p) | set(tgt)
@@ -225,3 +246,4 @@ pcbnew.ZONE_FILLER(board).Fill(board.Zones())
 board.Save(BRD)
 print(f"order={ORDER} nets fully routed {done}, partly {fail}, connections made {links}")
 print(f"SCORE {links}")
+open('/tmp/failed.txt','w').write("\n".join(sorted(FAILED)))

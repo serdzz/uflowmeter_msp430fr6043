@@ -235,3 +235,57 @@ copied geometry rather than anything to be improvised.
    ordered.
 4. Confirm U1's exposed-pad size against TI's RGC package drawing — the netlist uses KiCad's
    generic `EP5.45x5.45mm`, which is a starting point rather than a checked figure.
+
+## Manufacturing files
+
+`./make_fab.sh` writes everything JLCPCB asks for into `fab/`:
+
+* `uflowmeter-jlcpcb.zip` — the four copper layers, both masks, both silkscreens, both paste
+  layers, the outline, and the plated and non-plated drill files
+* `uflowmeter-bom.csv` — Comment / Designator / Footprint / LCSC Part #
+* `uflowmeter-cpl.csv` — Designator / Mid X / Mid Y / Layer / Rotation
+
+`finish_board.py` adds the three things a bare board needs and a router will not: fiducials in an
+asymmetric L so the assembly machine can find the board and tell which way round it is — a QFN-64
+on 0.5 mm pitch is placed from those, not from the outline — and a legend on both sides.
+
+Regenerate the whole board from the netlist with:
+
+```
+python3 mkboard.py       uflowmeter.net uflowmeter.kicad_pcb
+python3 route_maze.py    uflowmeter.kicad_pcb fat
+python3 route_cleanup.py uflowmeter.kicad_pcb
+python3 route_escape.py  uflowmeter.kicad_pcb
+python3 route_cleanup.py uflowmeter.kicad_pcb
+python3 route_rf.py      uflowmeter.kicad_pcb
+python3 finish_board.py  uflowmeter.kicad_pcb
+./make_fab.sh
+```
+
+using KiCad's own Python, which is the only one carrying `pcbnew`.
+
+## It is not orderable yet
+
+**32 connections are missing.** A bare board would be manufacturable and wrong.
+
+**Fifteen of them are the RF chain.** `route_rf.py` gets two hops of eighteen: the shunt parts sit
+across the straight line between the series ones, and moving them to make room means choosing a
+geometry, which is the one thing that must not be chosen freely here. The values are only correct
+together with TI's layout, and that layout is in the SWRR045 archive as CADSTAR and Gerbers —
+readable by a person, not by a script. **Transplant it.**
+
+**Seventeen are signals**, on fifteen nets: `CH0`, `I2C_SCL`, the `SPI` group, `XOSC_Q1`/`Q2`,
+`USSXTIN`/`USSXTOUT`, `RADIO_CS`, `RADIO_DCOUPL`, `RADIO_RBIAS`, `TEST`, `UART_TX`. Almost all are
+the last pins of the two QFNs, where the room runs out. They need a router that can push and shove
+what is already laid; these only ever add. That is half an hour in KiCad's interactive router.
+
+### Three things tried that did not help, so nobody tries them again
+
+* **Reordering the nets.** Six orderings, 23 to 36 connections, and the one already in use was
+  best. Routing the hardest nets first — the obvious idea — scored 33.
+* **Unbounding the search.** The router confines each search to its net's box plus a margin.
+  Widening that from 12 mm to 30 mm changed the result by exactly nothing: 36 connections either
+  way. The bound was never the limit.
+* **A second and third pass.** Identical output, plus duplicate copper.
+
+What is left is congestion, and congestion wants rip-up.
