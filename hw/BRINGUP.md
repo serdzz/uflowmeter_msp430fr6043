@@ -81,11 +81,12 @@ Check the module's silkscreen against J3 before plugging it in: **`GND VCC SCL S
 exist on these breakouts and the supply reversed will not do it any good.
 
 **5. The display's power switch, and its leakage.** With the module unplugged and `P3.4` high — the
-switch off — measure the current into `VCC_DISP`. **This is the measurement that decides battery
-life**, and it is the one number the IRLML6401's datasheet does not give at 3 V: it quotes −1.0 µA
-at −12 V and −25 µA at 55 °C, both near the part's rated voltage. At 3 V it will be far lower, but
-"far lower than a microamp" is not a number and this meter's entire idle draw is 5.7 µA. Measure it
-warm.
+switch off — measure the current into `VCC_DISP`. The IRLML6401's datasheet does not give this at
+3 V: it quotes −1.0 µA at −12 V and −25 µA at 55 °C, both near the part's rated voltage. At 3 V it
+will be far lower, but "far lower than a microamp" is not a number. Measure it warm.
+
+Measure it to catch a **faulty part or a bad joint**, not because it threatens the battery — see the
+section on the cell below, which is the correction to what an earlier draft of this file claimed.
 
 **6. The radio module.** Before fitting it, confirm three things by looking at it: **868 MHz**, **no
 power LED**, and **no regulator**. An indicator LED is a milliamp — two hundred times this
@@ -174,6 +175,39 @@ Two things about the threshold that a single capture will not show:
   as a flight time far too short.
 * **It moves with temperature**, because the signal weakens as the transducers warm. A threshold
   chosen at 20 °C wants checking at the extremes of the range the meter is meant to work over.
+
+## The cell, and what actually limits it
+
+The design is **not capacity-limited**, and knowing that redirects effort away from things that do
+not matter.
+
+| | Circuit | + self-discharge | Years |
+| --- | ---: | ---: | ---: |
+| Idle, no radio fitted | 3.4 µA | 25.1 | **86** |
+| Water moving, no radio | 11.1 | 32.8 | 66 |
+| Idle, radio fitted | 5.7 | 27.4 | **79** |
+| Water moving, radio fitted | 13.4 | 35.1 | 62 |
+
+An ER34615 is 19 Ah, and a bobbin Li-SOCl₂ cell self-discharges at roughly **1 % a year** — 190 mAh,
+which is **21.7 µA if you write it as a current**.
+
+**That is more than the whole instrument draws.** Four times the idle figure without a radio, twice
+the worst case with one. So the limit on this design is the cell's shelf life and its passivation,
+not its capacity, and every number above is four to six times the ten to fifteen years a meter of
+this kind is built for.
+
+Two things follow.
+
+**The MOSFET's leakage matters far less than an earlier draft of this file said.** At 0.5 µA the
+answer is 78 years instead of 79; at 5 µA it is 67. For leakage to halve the life it would have to
+reach about 25 µA, which is not leakage but a dead transistor. Measure it to find a fault, not to
+save the battery.
+
+**Without the radio fitted, a plain ER34615 will do.** The hybrid layer capacitor in the `H` version
+exists for the radio's 35 mA pulse; with no radio the largest draw is 4 mA for 1.1 ms from the
+ultrasonic front end, which a bobbin cell handles. Fit the `H` anyway if it is to hand — after
+months idle the passivation layer raises the internal impedance and even 4 mA can pull the voltage
+down — but it is insurance now rather than a requirement.
 
 ## What you fit yourself
 

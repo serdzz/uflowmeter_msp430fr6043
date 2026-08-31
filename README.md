@@ -104,8 +104,9 @@ which across 630 µA is a drop of fifty nanovolts. On-resistance is simply not a
 and 25 °C, and −25 µA at −9.6 V and 55 °C — both near the part's full rated voltage, where leakage
 is at its worst. At 3 V it will be far lower, but "far lower than a microamp" is not a number, and
 this meter's entire idle draw is 2.1 µA. **Measure it on the board, warm.** It is the one thing
-about this switch that could quietly halve the battery life, and the only symptom would be cells
-coming back early from the field years later.
+about this switch that is worth measuring — not because it threatens the battery, which it does not:
+against the cell's own 21.7 µA of self-discharge even 5 µA of leakage costs about a year in eighty.
+An abnormally large one is a sign of a faulty part or a bad joint, and that is the reason to look.
 
 #### The pull-ups
 

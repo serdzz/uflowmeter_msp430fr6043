@@ -53,8 +53,9 @@
 //! draw is 2.1 µA.
 //!
 //! So it wants measuring on the actual board, at the actual rail voltage, warm. It is the one thing
-//! about this switch that could quietly halve the battery life, and the only symptom would be cells
-//! coming back early from the field years later.
+//! about this switch that is worth measuring — not because it threatens the battery, which it does not:
+//! against the cell's own 21.7 µA of self-discharge even 5 µA of leakage costs about a year in eighty.
+//! An abnormally large one is a sign of a faulty part or a bad joint, and that is the reason to look.
 //!
 //! # Two things this is not right for
 //!
