@@ -92,7 +92,37 @@ power LED**, and **no regulator**. An indicator LED is a milliamp — two hundre
 instrument's whole budget, and it would flatten the cell in weeks. Then check `MARCSTATE` reads over
 SPI, which validates all four wires at once.
 
-**7. The transducers.** This is the part of the design that does not exist yet: what sits between
+**7. The calibration interface.** J5 is a plain UART at **115 200 8N1** — `Config::default()` in the
+HAL, which the firmware does not override. Open a terminal and press Enter:
+
+```
+uflowmeter calibration
+```
+
+`I` reports the software version and the image checksum, `P` the parameters, `W <n> <value>` writes
+one, `S` seals the instrument.
+
+**Only 3.3 V adapters.** The board runs from a 3.6 V cell and an MSP430 pin tolerates `VCC + 0.3 V`.
+Most FT232R breakouts carry a 5 V / 3.3 V jumper and ship on 5 V; in that position it drives 5 V
+into P4.4, which is past the absolute maximum. Check the jumper before plugging anything in. An
+FT230X or FT231X has no such trap — it takes its level from `VCCIO`.
+
+Note that the FTDI **FT200XD** and **FT201X** are USB-to-**I²C** bridges, not UART, and will not
+talk to J5 at all. (They would talk to the display, which is occasionally useful.)
+
+| J5 | Adapter |
+| --- | --- |
+| 1 `GND` | GND |
+| 2 `TX` — the board transmits | **RXD** |
+| 3 `RX` — the board receives | **TXD** |
+
+Crossed, as usual. **Do not let the adapter power the board** — it has its own supply, and two
+sources on one rail is a way to find out which one wins.
+
+**Do not send `S` until a flow rig says so.** It is irreversible: the firmware never opens this
+UART again afterwards, and there is no command to unseal. That is the point of it.
+
+**8. The transducers.** This is the part of the design that does not exist yet: what sits between
 `CH0`/`CH1` and the transducers — matching, bias, protection — was never specified, because it
 depends on transducers nobody had chosen. J4 brings the pins to a header so it can be worked out on
 the bench. Run `uss_scope` from the HAL's examples first: it prints the captured waveform, which is
