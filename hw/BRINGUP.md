@@ -146,6 +146,49 @@ What the plot answers, in the order the questions matter:
 If the USS will not start at all it says so: *"USS did not start: check the crystal and the supply"*.
 That points at Y2 and `PVCC`, which is step 3's business, not the transducers'.
 
+### Clamp-on transducers: yes for the bench, no for the instrument
+
+Clamping a pair to any pipe is the quickest way to get a first waveform — no spool piece, no
+plumbing, and you can move them about while watching the plot. For bringing the front end up it is
+the right first step.
+
+What has to change, all of it in the driver's `Config`:
+
+| | |
+| --- | --- |
+| `pga_gain` | the signal crosses two pipe walls, so it arrives 20–40 dB weaker |
+| `burst_threshold` | lower to match — `W 7` over J5 |
+| `SAMPLES` (200) | a longer window: sound travels through the wall as well as the water |
+| `pulses` (10) | more energy into the transducer |
+
+You also need **wedges** — usually acrylic — to set the refraction angle, and couplant. Without the
+wedges the beam does not enter the water at a useful angle at all.
+
+**But not for a billing instrument, and the reason is not signal quality.** This firmware is built
+for MID and WELMEC 7.2, where the instrument must be sealed and its metrological characteristics
+verifiable. A clamp-on measurement depends on things that are not part of the instrument and cannot
+be sealed with it:
+
+* the pipe's wall thickness and material, which set the sound speed in the wall and the geometry;
+* the couplant, which dries, creeps and ages;
+* where the wedges sit, which nobody seals.
+
+Slide the wedges a centimetre and the reading changes, and **the seal on the instrument will not
+notice**. The write counter, the image checksum and `zero_offset_ps` all protect what is inside the
+case, while the measurement is decided by what is outside it. That is why clamp-on meters are rare
+in custody transfer — not because they measure badly, but because they cannot be sealed whole.
+
+That is reasoning from the framework this firmware is built in, not a quotation from it. If you are
+seriously considering clamp-on for billing, it is the first question for the notified body, and the
+answer is likely to be no.
+
+There is a subtler problem too. `zero_offset_ps` is the largest error in a meter of this kind. With
+wetted transducers it comes from the transducers' own asymmetry and holds steady, which is why it
+can be calibrated once and sealed. With clamp-on it also comes from the couplant, and **the couplant
+changes with temperature and with age**. So the one parameter the calibration exists to pin down
+drifts after calibration — and the firmware will not notice: it subtracts the old value and reports
+a confident wrong number.
+
 ### Choosing the threshold
 
 `uss_scope` finishes each pair of captures with a line like:
