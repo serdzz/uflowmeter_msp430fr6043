@@ -122,11 +122,58 @@ sources on one rail is a way to find out which one wins.
 **Do not send `S` until a flow rig says so.** It is irreversible: the firmware never opens this
 UART again afterwards, and there is no command to unseal. That is the point of it.
 
-**8. The transducers.** This is the part of the design that does not exist yet: what sits between
-`CH0`/`CH1` and the transducers — matching, bias, protection — was never specified, because it
-depends on transducers nobody had chosen. J4 brings the pins to a header so it can be worked out on
-the bench. Run `uss_scope` from the HAL's examples first: it prints the captured waveform, which is
-the only honest way to choose a burst threshold, a gain and a capture window.
+**8. The transducers, with `uss_scope`.** This is the part of the design that does not exist yet:
+what sits between `CH0`/`CH1` and the transducers — matching, bias, protection — was never
+specified, because it depends on transducers nobody had chosen. J4 brings the pins to a header so it
+can be worked out on the bench.
+
+**Run `uss_scope` before the meter firmware, and before believing any number a meter produces.**
+It is in the HAL's examples, it speaks over the same J5 header at the same 115 200, and it prints
+the samples the receiving transducer actually produced — one per line, 200 of them, every five
+seconds, so a capture pastes straight into anything that plots a column of numbers.
+
+What the plot answers, in the order the questions matter:
+
+* **Is the transducer ringing at all?** A flat line means the excitation is not reaching it — look at
+  J4, the wiring, and whether `PVCC` is present, before suspecting anything subtle.
+* **Where in the capture does the burst arrive?** If it is at the very edge or absent, the window is
+  looking at the wrong time and no threshold will fix that.
+* **How big is it?** That sets the gain and the threshold.
+* **Has the transmitter stopped ringing before the echo lands?** If the two overlap, the stop pulses
+  need adjusting — `config.rs` sends two.
+
+If the USS will not start at all it says so: *"USS did not start: check the crystal and the supply"*.
+That points at Y2 and `PVCC`, which is step 3's business, not the transducers'.
+
+### Choosing the threshold
+
+`uss_scope` finishes each pair of captures with a line like:
+
+```
+# peaks 812 774, try threshold 387
+```
+
+That suggestion is **half the smaller of the two peaks** — comfortably above the noise, and below
+both. The *smaller* one matters: a threshold that catches one direction earlier than the other
+biases the flight-time difference, and the flight-time difference is the entire measurement.
+
+Then write it into the instrument, over J5:
+
+```
+W 7 387
+```
+
+Parameter 7 is `burst_threshold`. It defaults to **400**, which is a guess written when there was no
+hardware — replace it with what the scope actually measured. It is per instrument for a reason: the
+transducers vary batch to batch, and this is the number that decides when the firmware believes an
+echo has arrived.
+
+Two things about the threshold that a single capture will not show:
+
+* **Too low and it triggers on the transmitter's own ring-down** rather than the echo, which reads
+  as a flight time far too short.
+* **It moves with temperature**, because the signal weakens as the transducers warm. A threshold
+  chosen at 20 °C wants checking at the extremes of the range the meter is meant to work over.
 
 ## What you fit yourself
 
