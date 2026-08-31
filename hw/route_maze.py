@@ -201,6 +201,10 @@ def commit(path, net):
 ORDER = sys.argv[2] if len(sys.argv) > 2 else 'fat'
 try:    HARD = set(open('/tmp/hard.txt').read().split())
 except Exception: HARD = set()
+# 'only' routes just the nets named in /tmp/only.txt and leaves the rest alone, which is what a
+# second pass over an almost-finished board wants: re-running everything only duplicates copper.
+try:    ONLY = set(open('/tmp/only.txt').read().split())
+except Exception: ONLY = set()
 
 def span(kv):
     xs=[p.GetPosition().x for p in kv[1]]; ys=[p.GetPosition().y for p in kv[1]]
@@ -222,10 +226,26 @@ KEYS = {
 
 done=fail=links=0
 FAILED=set()
-for netname, plist in sorted(pads.items(), key=KEYS[ORDER]):
+for netname, plist in sorted(pads.items(), key=KEYS.get(ORDER, KEYS['fat'])):
+    if ORDER == 'only' and netname not in ONLY: continue
     if netname in SKIP or len(plist) < 2: continue
     net = plist[0].GetNet(); nc = net.GetNetCode()
+    # Seed from whatever this net already has on the board, not just from its first pad. Without
+    # this a second pass re-routes finished nets from scratch and never reaches the pad that was
+    # actually missing.
     connected = set(cells_of(plist[0]))
+    for t in board.Tracks():
+        if t.GetNetCode() != nc: continue
+        if isinstance(t, pcbnew.PCB_VIA):
+            cx, cy = cell(t.GetPosition())
+            connected |= {(cx, cy, 0), (cx, cy, 1)}
+            continue
+        li = LI.get(t.GetLayer())
+        if li is None: continue
+        (ax, ay), (bx, by) = cell(t.GetStart()), cell(t.GetEnd())
+        n = max(abs(bx-ax), abs(by-ay), 1)
+        for i in range(n+1):
+            connected.add((ax + (bx-ax)*i//n, ay + (by-ay)*i//n, li))
     ok=True
     for pad in plist[1:]:
         tgt = cells_of(pad)

@@ -122,18 +122,15 @@ ground plane with routing cut through it.
 
 ## The three sections, kept apart
 
-### RF — copy TI, do not improvise
+### The radio — a header, and nothing to get wrong
 
-Copy the CC1101EM 868/915 MHz reference layout (SWRR045) **component for component and trace for
-trace**, including its ground via placement. The matching values are only valid together with the
-parasitics of that layout.
+J6 is eight pins to a module. There is no matching network on this board, no controlled impedance
+and no antenna connector, because there is no RF on it: the module carries all of that.
 
-* 50 Ω controlled impedance from the balun to J2. On JLC04161H-7628, a microstrip over layer 2 is
-  about **0.30 mm wide** — confirm against JLCPCB's own impedance calculator for the stackup you
-  order, do not take that number from here.
-* Ground vias flanking the RF trace, every 2–3 mm.
-* No routing on layer 2 anywhere under the RF section.
-* Y3 (26 MHz) as close to U2 as the footprints allow, with its own ground vias.
+* C2 (10 µF) at J6, so the 35 mA transmit pulse comes out of a capacitor rather than down the cell
+  leads.
+* Keep the module's footprint clear of the ultrasonic corner. It is still a radio, and the front end
+  is still measuring picoseconds.
 
 ### Ultrasonic front end — the quiet corner
 

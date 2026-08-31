@@ -1,78 +1,52 @@
-# The 868 MHz section
+# The radio
 
-Values from **TI's CC1101EM 868/915 MHz reference design, revision 3.0.0** (SWRR045) — the version
-DN017 labels newest and recommended. Two older versions exist and are marked "not recommended" and
-"should not be used"; this is neither of them.
-
-## Topology
+**A module on a header, not a chip on this board.** J6 carries eight pins:
 
 ```
-RF_P (12) ──L121 12n──┬───────────┬──C122 1.5p──┬──L123 12n──┬──L124 12n──┬──C125 12p──┬── ANT
-                      │           │             │            │            │            │
-                     C121        L122          (node C)     C123         C126 47p      │
-                     1.0p        18n                        3.3p            │          │
-                      │           │                          │           L125 3.3n     │
-RF_N (13) ──L131 12n──┴──┬──L132──┘             GND ─────────┘              └──────────┘
-                         │   18n
-                       C131 1.5p            C124 100p from L122 to GND
-                         │
-                        GND
+1 GND   2 VCC   3 GDO0   4 CSN   5 SCK   6 MOSI   7 GDO2   8 MISO
 ```
 
-`C126` and `L125` sit in series *across* `C125`. `C125` is part of the matching either way — only
-those two come out if the notch is not wanted.
+`GDO0` and `GDO2` are left unconnected — the firmware polls `MARCSTATE` over SPI rather than
+watching a pin, because a frame is four milliseconds and the CPU has nothing else to do in them.
 
-## Bill of materials
+## What this decision removed
 
-| Ref | Value | Package | Type |
-| --- | --- | --- | --- |
-| L121, L123, L124, L131 | 12 nH | 0402 | **wirewound**, Murata LQW15A |
-| L122, L132 | 18 nH | 0402 | **wirewound**, Murata LQW15A |
-| L125 | 3.3 nH | 0402 | **wirewound** — notch |
-| C121 | 1.0 pF | 0402 | NP0, ±0.25 pF, 50 V |
-| C122, C131 | 1.5 pF | 0402 | NP0, ±0.25 pF, 50 V |
-| C123 | 3.3 pF | 0402 | NP0, ±0.25 pF, 50 V |
-| C124 | 100 pF | 0402 | NP0, ±5%, 50 V |
-| C125 | 12 pF | 0402 | NP0, ±5%, 50 V |
-| C126 | 47 pF | 0402 | NP0, ±5%, 50 V — notch |
-| **R171** | **56 kΩ** | 0402 | 1% — `RBIAS`, pin 17 |
-| C81 | 12 pF | 0402 | NP0, 50 V — X1 load |
-| C101 | 15 pF | 0402 | NP0, 50 V — X1 load |
-| X1 | 26.000 MHz | | |
-| C41…C151 | 100 nF | 0402 | X5R, 10 V — one per supply pin |
-| C1 | 1 µF | 0805 | X7R, 16 V |
-| L1 | ferrite bead, 1 kΩ @ 100 MHz | 0402 | in the VDD feed |
+Twenty parts and the two hardest problems on the board:
 
-Three of these were missing from the first draft of `SCHEMATIC.md` and would each have cost a board
-spin:
+| Gone | |
+| --- | --- |
+| U2, Y3, R5, L2, C11–C17 | the CC1101 itself, its 26 MHz crystal, its bias resistor, its supply bead and decoupling |
+| L121–L132, C121–C131 | the whole filter balun and the 699 MHz notch |
+| J2 | the u.FL antenna connector |
 
-* **R171, the `RBIAS` resistor.** The CC1101 sets its internal bias current through it. Without it
-  the radio does not work at all.
-* **The crystal load caps are not equal** — 12 pF and 15 pF. Fitting a matched pair is the obvious
-  thing to do and is not what TI specifies.
-* **The ferrite bead in the supply feed**, which is what keeps the radio's own switching out of the
-  rest of the board.
+With them went the requirement to transplant TI's reference layout — which exists only as CADSTAR
+and Gerbers, readable by a person and not by a script — and the requirement to prove EN 300 220 by
+**conducted** measurement, which is what an antenna connector on your own board obliges you to do.
 
-## Wirewound, and specifically these
+The firmware did not change. It still speaks to a real CC1101 over the same four wires, and every
+register value in `radio/cc1101.rs` still applies.
 
-The reference schematic says it in a note on the drawing: *"Wire Wound inductors have been used in
-the balun and LC filter. Murata LQW15A series."*
+## What the module has to be
 
-DN017's Table 5 is why it matters. Same circuit, multilayer inductors, `PA = 0xC0`: second harmonic
-−30.8 dBm and EN 300 220 compliance recorded as **"no margin"**. Wirewound: −34.8 dBm, passes, and
-12.0 dBm out at 35.0 mA. Multilayer 0402 inductors are the cheaper default and the wrong part.
+Three things, and the third is the one that quietly ruins a battery meter.
 
-## The notch
+**868 MHz.** The same CC1101 silicon covers 315, 433, 868 and 915 MHz, but a module's matching
+network and antenna do not. A 433 MHz module will accept every register write and radiate almost
+nothing at 868.
 
-`C126` + `L125` attenuate a spurious emission at carrier − 169 MHz — 699 MHz for an 868 MHz carrier,
-where EN 300 220 allows −54 dBm and the bare CC1101 exceeds it.
+**Without a power LED.** An indicator LED is a milliamp, continuously. This instrument's entire
+budget is 5.7 µA. One LED is two hundred times the whole meter and would flatten the cell in weeks.
+Most bare CC1101 modules have none — check the one in your hand rather than the photograph.
 
-Needed here, because this board brings the antenna out to a connector and compliance is then proven
-by **conducted** measurement, which sees the spur. A board with an integrated antenna is assessed
-radiated and can leave `C126` and `L125` unmounted.
+**Without a regulator, or with one whose quiescent current is nanoamps.** The board feeds the module
+3.6 V directly, which the CC1101 takes natively. A module carrying an LDO in front of it adds that
+LDO's quiescent current to the budget, permanently.
 
-## Layout
+If the module is pre-certified to EN 300 220, that is worth more than its price difference: it moves
+the radio compliance off your instrument entirely.
 
-Copy the reference layout, `CC1101EM_868_915MHz_LAYOUT_3_0_0.pdf`, component for component. The
-values above are only correct together with the parasitics they were characterised on. The archive
-also carries the Gerbers and the PADS `.pcb`, so the geometry can be lifted rather than redrawn.
+## What is still true from before
+
+TI's Design Note DN017 measured this silicon at **35.0 mA transmitting**, and that is what
+`energy.rs` prices. A module does not change the current; it changes who is responsible for the
+matching network that current flows into.

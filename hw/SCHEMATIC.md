@@ -21,7 +21,7 @@ from 1.8 V to 3.6 V natively.
   below the MCU's 3.6 V recommended maximum. Not fitted, link it out with a 0 Ω. The trade is
   headroom at end of life against operating slightly above TI's recommended conditions at the start.
 * **C1** — 100 µF, 6.3 V, `0805`, across `VCC` at the cell terminals.
-* **C2** — 10 µF `0603`, at U2. The radio's 35 mA pulse comes out of this, not out of the cell.
+
 
 ## U1 — MSP430FR5043IRGCR, VQFN-64-EP 9×9
 
@@ -35,8 +35,7 @@ LCD controller, and since the display is an OLED on I²C that controller was nev
 | DVCC | `VCC` | C3 100 n `0402` |
 | AVCC | `VCC` | C4 100 n `0402` |
 | DVSS, AVSS | `GND` | |
-| VCORE | `VCORE` | C5 470 n `0402` to `GND` — required, not optional |
-| EP (pad) | `GND` | at least 9 vias |
+| VCORE | EP (pad) | `GND` | at least 9 vias |
 
 ### Clocks
 
@@ -65,86 +64,25 @@ Load capacitor values follow each crystal's C\_L, not a habit — see `LAYOUT.md
 * **J1** — 4-pin 1.27 mm Spy-Bi-Wire header: 1 `VCC`, 2 `GND`, 3 `RST/SBWTDIO`, 4 `TEST/SBWTCK`.
   This is how firmware gets in. A board without it is a board you throw away.
 
-## U2 — CC1101RGPR, QFN-20-EP 4×4, 868.95 MHz
+## The radio — a module on J6
 
-| CC1101 | Net | MCU pin |
-| --- | --- | --- |
-| SI | `SPI_MOSI` | P1.2 — RGC64 pin 19 |
-| SO (GDO1) | `SPI_MISO` | P1.3 — RGC64 pin 20 |
-| SCLK | `SPI_SCK` | P1.0 — RGC64 pin 3 |
-| CSn | `RADIO_CS` | P3.5 — RGC64 pin 52 |
-| XOSC_Q1/Q2 | Y3 26 MHz + **C11 = 12 pF, C12 = 15 pF** | |
-| **RBIAS (17)** | **R5 = 56 kΩ to `GND`** | |
-| AVDD ×4, DVDD | `VCC` through **L2, ferrite bead 1 kΩ @ 100 MHz** | C13–C16 100 n `0402`, one per pin |
-| DCOUPL | `RADIO_DCOUPL` | C17 100 n to `GND` |
-| DGUARD | `GND` | |
-| RF_P, RF_N | filter balun → J2 | see [`RF.md`](RF.md) |
-| GDO0, GDO2 | not connected | |
+Not a chip on this board. See [`RF.md`](RF.md) for what that removed and what the module has to be.
 
-Three of these came out of TI's reference design and were absent from the first draft. Each would
-have cost a board spin on its own:
+| J6 | Net | MCU |
+| ---: | --- | --- |
+| 1 | `GND` | |
+| 2 | `VCC` | |
+| 3 | GDO0 | not connected |
+| 4 | `RADIO_CS` | P3.5 — pin 52 |
+| 5 | `SPI_SCK` | P1.0 — pin 3 |
+| 6 | `SPI_MOSI` | P1.2 — pin 19 |
+| 7 | GDO2 | not connected |
+| 8 | `SPI_MISO` | P1.3 — pin 20 |
 
-* **R5, the `RBIAS` resistor**, sets the radio's internal bias current. Without it nothing
-  transmits.
-* **The crystal load capacitors are not a matched pair** — 12 pF and 15 pF. Fitting two of the same
-  value is the obvious thing and is not what TI specifies.
-* **L2, the ferrite bead in the supply feed**, keeps the radio's switching out of the rest of the
-  board — which on this board includes an analog front end measuring picoseconds.
+* **C2** — 10 µF `0603` at J6. The radio's 35 mA pulse comes out of this, not down the cell leads.
 
-`GDO0` and `GDO2` are left unconnected on purpose: the firmware polls `MARCSTATE` over SPI rather
-than watching a pin, because a frame is four milliseconds and the CPU has nothing else to do in
-them.
-
-### The filter balun — copy TI's reference design, do not invent it
-
-`RF_P`/`RF_N` are differential; the antenna is single-ended 50 Ω. The network between them is a
-filter balun, and the impedance the chip wants to see toward the antenna is **Z = 86.5 + j43 Ω at
-868 MHz**.
-
-Designators, per TI Design Note **DN017 (SWRA168A)**: C121, C122, C123, C124, C125, L121, L122,
-L123, L124, L131, L132, C131.
-
-**The values are not reproduced here.** They live in TI's CC1101EM 868/915 MHz reference design
-(SWRR045) and must be copied from it exactly, along with its layout. Two reasons this is not
-pedantry:
-
-1. **There are three versions of that reference design.** DN017 labels them "newest, recommended",
-   "second version, not recommended", and "first version, should not be used". Copying the wrong one
-   off a forum post is a real and common failure.
-2. RF matching depends on board parasitics, so the values are only correct together with the
-   layout they were characterised on.
-
-### Two things that decide whether it can be sold in Europe
-
-Both come out of DN017 and neither is obvious from the CC1101 datasheet.
-
-**The inductors must be wirewound, not multilayer.** DN017's Table 5 measures the same circuit with
-both:
-
-| Inductors | PA setting | TX current | Output | 2nd harmonic | ETSI EN 300 220 |
-| --- | --- | ---: | ---: | ---: | --- |
-| All multilayer | 0xC0 | 33.6 mA | 9.8 dBm | −30.8 dBm | **no margin** |
-| All multilayer | 0xC2 | 30.4 mA | 9.3 dBm | −37.3 dBm | passes |
-| **All wirewound** | **0xC0** | **35.0 mA** | **12.0 dBm** | −34.8 dBm | **passes** |
-
-Cheap multilayer inductors are the default choice and they are the wrong one here.
-
-**The 699 MHz notch filter is required.** A CC1101 emits a spur above −54 dBm at 699 MHz, and
-EN 300 220 requires below −54 dBm. Because this board uses an antenna *connector*, compliance is
-proven by **conducted** measurement, which sees that spur. Three extra parts, values from DN017
-Table 1:
-
-| Part | Value |
-| --- | --- |
-| C125 | 12 pF |
-| C126 | 47 pF |
-| L125 | 3.3 nH |
-
-(A board with an integrated antenna is assessed by radiated measurement instead and can leave the
-notch out. That is a different board.)
-
-* **J2** — u.FL / IPEX connector. An external, already-certified whip antenna is the cheapest way
-  through RED for a first product.
+The module runs from `VCC` directly, unswitched: the CC1101 has its own `SPWD` state at 200 nA,
+which is below this meter's own sleep current, so there is nothing for a switch to save.
 
 ## Display
 

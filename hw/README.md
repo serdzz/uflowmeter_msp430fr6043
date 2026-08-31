@@ -19,9 +19,11 @@ So: three documents a person can lay out from, and a BOM they can order against.
 | --- | --- |
 | [`SCHEMATIC.md`](SCHEMATIC.md) | every net and pin, with what is unverified stated at the end |
 | [`PINOUT.md`](PINOUT.md) | all 64 pins, transcribed from the package drawing |
-| [`RF.md`](RF.md) | the 868 MHz section, values from TI's reference design |
-| [`uflowmeter.kicad_pcb`](uflowmeter.kicad_pcb) | the board — 54 footprints placed, DRC clean, unrouted |
-| [`uflowmeter.net`](uflowmeter.net) | the netlist it was built from |
+| [`RF.md`](RF.md) | the radio, and why it is a module rather than a chip |
+| [`uflowmeter.kicad_sch`](uflowmeter.kicad_sch) | the schematic, generated and checked against the netlist |
+| [`uflowmeter.kicad_pcb`](uflowmeter.kicad_pcb) | the board |
+| [`mknet.py`](mknet.py) | the netlist as source — everything else is built from it |
+| `./build_board.sh` | netlist → schematic → board → routing → fabrication files |
 | [`bom.csv`](bom.csv) | JLCPCB BOM — LCSC numbers, tiers, notes |
 | [`LAYOUT.md`](LAYOUT.md) | stackup, the three sections, design rules |
 
@@ -51,17 +53,18 @@ pulse while the cell delivers the average. That, plus C2 close to the radio.
 
 This is the kind of thing that works on the bench for a week and fails in the field in January.
 
-### Two conditions for selling it in Europe
+### The radio is a module, and that removed the hardest part of the board
 
-Both from TI Design Note DN017, neither obvious from the CC1101 datasheet.
+The CC1101 was on this board, with its crystal, its bias resistor and the whole filter balun. All of
+it is gone; J6 carries eight pins to a ready-made module instead.
 
-**The matching inductors must be wirewound.** With multilayer inductors the second harmonic is
-−30.8 dBm and TI's own measurement of EN 300 220 compliance is "no margin". With wirewound, it
-passes. Multilayer is the cheaper default and the wrong choice.
+What that bought: TI's reference layout no longer has to be transplanted — it exists only as CADSTAR
+and Gerbers, readable by a person and not by a script — and EN 300 220 no longer has to be proven by
+**conducted** measurement, which an antenna connector on your own board obliges you to do.
 
-**A 699 MHz notch filter is required.** The CC1101 emits a spur there above the −54 dBm EN 300 220
-allows. Because this board uses an antenna connector, compliance is proven by conducted measurement,
-which sees it. Three parts: 12 pF, 47 pF, 3.3 nH.
+What it costs: unit price at volume, and a dependency on a module that must be 868 MHz, must have no
+power LED, and must have no regulator with a quiescent current worth speaking of. See
+[`RF.md`](RF.md); an LED alone would be two hundred times this instrument's whole budget.
 
 ## Cost
 

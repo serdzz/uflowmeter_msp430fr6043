@@ -1,36 +1,19 @@
 Comment,Designator,Footprint,LCSC,Tier,Note
-MSP430FR5043IRGCR,U1,VQFN-64-EP(9x9),C1850128,extended,"stock 133 -- low; check before committing"
-CC1101RGPR,U2,QFN-20-EP(4x4),C29953,extended,stock 7495
+MSP430FR5043IRGCR,U1,VQFN-64-EP(9x9),C1850128,extended,"stock was 133 -- check before committing"
 IRLML6401,Q1,SOT-23,C382329,extended,"P-channel; gate LOW = display ON"
 32.768kHz 12.5pF,Y1,SMD3215-2P,C32346,BASIC,Epson Q13FC13500004
-8MHz,Y2,SMD5032-2P,C115962,BASIC,"USS reference -- sets the measurement"
-26MHz,Y3,SMD3225-4P,C5143383,extended,CC1101 reference
+8MHz,Y2,SMD5032-2P,C115962,BASIC,"USS reference -- sets the measurement; must be a crystal"
 Schottky 40V,D1,SOD-123,,,"optional; 0R link if omitted"
 100uF 6.3V,C1,0805,,BASIC,across the cell
-10uF,C2,0603,,BASIC,at U2 -- sources the 35mA pulse
-100nF,"C3,C4,C10,C13,C14,C15,C16,C17,C19,C20,C21",0402,,BASIC,"decoupling; C20/C21 at the PVCC pins"
-470nF,C5,0402,,BASIC,VCORE -- required
+10uF,C2,0603,,BASIC,"at J6 -- sources the radio's 35 mA pulse"
+100nF,"C3,C4,C10,C19,C20,C21",0402,,BASIC,"decoupling; C20/C21 at the PVCC pins; C10 on RST"
 1uF,C18,0603,,BASIC,VCC_DISP
 Y1 load,"C6,C7",0402,,BASIC,"value per Y1 C_L -- see LAYOUT.md"
 Y2 load,"C8,C9",0402,,BASIC,value per Y2 C_L
-Y3 load,"C11,C12",0402,,BASIC,value per Y3 C_L
 47k,R1,0402,,BASIC,reset pull-up
 1M,R2,0402,,BASIC,"gate pull-up -- NOT optional"
 4.7k,"R3,R4",0402,,BASIC,"I2C pull-ups to VCC_DISP only"
-12pF NP0,C125,0402,,BASIC,"matching -- fitted either way"
-47pF NP0,C126,0402,,BASIC,699MHz notch -- omit if radiated-only
-3.3nH wirewound,L125,0402,,,699MHz notch -- omit if radiated-only
-12nH wirewound,"L121,L123,L124,L131",0402,,,Murata LQW15A -- see RF.md
-18nH wirewound,"L122,L132",0402,,,Murata LQW15A
-1.0pF NP0,C121,0402,,BASIC,+/-0.25pF 50V
-1.5pF NP0,"C122,C131",0402,,BASIC,+/-0.25pF 50V
-3.3pF NP0,C123,0402,,BASIC,+/-0.25pF 50V
-100pF NP0,C124,0402,,BASIC,+/-5% 50V
-56k 1%,R5,0402,,BASIC,"CC1101 RBIAS -- radio dead without it"
-Ferrite bead 1k@100MHz,L2,0402,,,CC1101 supply feed
-12pF NP0,C11,0402,,BASIC,"Y3 load -- NOT equal to C12"
-15pF NP0,C12,0402,,BASIC,Y3 load -- NOT equal to C11
-u.FL,J2,IPEX,,,antenna connector
+Header 2.54mm 8p,J6,,,,"radio module: GND VCC GDO0 CSN SCK MOSI GDO2 MISO"
 Header 1.27mm 4p,J1,,,,"Spy-Bi-Wire: VCC,GND,SBWTDIO,SBWTCK"
 Header 2.54mm 4p,"J3,J4",,,,"J3 = GND VCC SCL SDA, matching the module silkscreen"
 Header 2.54mm 3p,J5,,,,"calibration UART: GND,TX,RX"

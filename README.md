@@ -41,7 +41,8 @@ measuring less often, which is what the adaptive interval does.
 
 ### The radio
 
-**Wireless M-Bus, mode C1, 868.95 MHz, on a CC1101.** The instrument transmits and never listens.
+**Wireless M-Bus, mode C1, 868.95 MHz, on a CC1101 module.** The instrument transmits and never
+listens.
 
 That is not a limitation, it is what makes a radio affordable at all. Receiving costs 15.6 mA; an
 instrument listening even one per cent of the time would draw 156 µA, ten times everything else here
@@ -55,6 +56,13 @@ update. For a meter in a stairwell that is the right trade, and wM-Bus has a mod
 C1 rather than the more common T1 because T1 encodes every byte as 3-out-of-6 symbols — a table, an
 encoder, and half again as many bits on air. C1 sends bytes as they are, and the flash the encoder
 would have cost is flash this instrument does not have.
+
+**The CC1101 sits on a module, not on this board.** It was on the board — chip, crystal, bias
+resistor, filter balun, u.FL — and taking it off removed the two hardest problems in the design:
+transplanting TI's reference layout, which exists only as CADSTAR and Gerbers, and proving
+EN 300 220 by conducted measurement, which an antenna connector on your own board obliges you to do.
+The firmware did not change. See [`hw/RF.md`](hw/RF.md) for what the module has to be — 868 MHz, and
+above all **no power LED**, which would be two hundred times this instrument's whole budget.
 
 **It is unencrypted, and that is not shippable.** A real deployment runs OMS security profile A or B
 — AES-128 in mode 5 or 7 — and a meter broadcasting its reading in clear is both a privacy problem
