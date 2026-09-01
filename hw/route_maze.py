@@ -22,6 +22,25 @@ VIA_D, DRILL = MM(0.6), MM(0.3)
 VIA_COST = 24                    # in cells: a via is worth about 5 mm of track
 SKIP  = {'RF_P','RF_N','RFA','RFB','RFC','RFD','RFE','ANT','RF_SHUNT','GND','VCC'}
 
+
+def nets_with_work(board_path):
+    """Which nets still have something unconnected, asked of DRC rather than of the API.
+
+    pcbnew's GetRatsnestForNet hands back an opaque object with no length, so a naive check on it
+    silently reports every net as unfinished -- which is how two nets ended up routed twice."""
+    import subprocess, json, re, tempfile, os
+    out = os.path.join(tempfile.gettempdir(), "_unconn.json")
+    subprocess.run(["kicad-cli", "pcb", "drc", "--output", out, "--format", "json",
+                    "--severity-error", board_path], capture_output=True)
+    try:    items = json.load(open(out)).get("unconnected_items", [])
+    except Exception: return None            # cannot tell -- route everything
+    names = set()
+    for it in items:
+        for i in it.get("items", []):
+            m = re.search(r"\[([^\]]+)\]", i.get("description", ""))
+            if m: names.add(m.group(1))
+    return names
+
 board = pcbnew.LoadBoard(BRD)
 bb = board.GetBoardEdgesBoundingBox()
 X0, Y0 = bb.GetLeft(), bb.GetTop()
@@ -241,10 +260,15 @@ KEYS = {
  'hard':  lambda kv: (0 if kv[0] in HARD else 1, -len(kv[1])),
 }
 
+# Nets with nothing left unconnected are left alone -- otherwise a pass lays a second complete
+# path beside the first, which passes DRC and shows up only as copper nobody asked for.
+TODO_NETS = nets_with_work(BRD)
+
 done=fail=links=0
 FAILED=set()
 for netname, plist in sorted(pads.items(), key=KEYS.get(ORDER, KEYS['fat'])):
     if ORDER == 'only' and netname not in ONLY: continue
+    if TODO_NETS is not None and netname not in TODO_NETS: continue
     if netname in SKIP or len(plist) < 2: continue
     net = plist[0].GetNet(); nc = net.GetNetCode()
     # Seed from whatever this net already has on the board, not just from its first pad. Without

@@ -3,6 +3,25 @@ bottom layer where there is almost nothing in the way."""
 import sys, math, collections, pcbnew
 from pcbnew import FromMM as MM, VECTOR2I
 
+
+def nets_with_work(board_path):
+    """Which nets still have something unconnected, asked of DRC rather than of the API.
+
+    pcbnew's GetRatsnestForNet hands back an opaque object with no length, so a naive check on it
+    silently reports every net as unfinished -- which is how two nets ended up routed twice."""
+    import subprocess, json, re, tempfile, os
+    out = os.path.join(tempfile.gettempdir(), "_unconn.json")
+    subprocess.run(["kicad-cli", "pcb", "drc", "--output", out, "--format", "json",
+                    "--severity-error", board_path], capture_output=True)
+    try:    items = json.load(open(out)).get("unconnected_items", [])
+    except Exception: return None            # cannot tell -- route everything
+    names = set()
+    for it in items:
+        for i in it.get("items", []):
+            m = re.search(r"\[([^\]]+)\]", i.get("description", ""))
+            if m: names.add(m.group(1))
+    return names
+
 board = pcbnew.LoadBoard(sys.argv[1])
 SKIP = {'RF_P','RF_N','RFA','RFB','RFC','RFD','RFE','ANT','RF_SHUNT','GND','VCC'}
 
@@ -36,10 +55,21 @@ def line_free(a, b, r, net=None, layer=BOTH):
         if not free(pt, r, net, layer): return False
     return True
 
+# Only nets that still have something unconnected. Without this the pass re-routes finished nets
+# from scratch and lays a second complete path beside the first -- which is how CH1 ended up with
+# 59 mm of copper and four vias where one path does, and USSXTIN with two.
+TODO_NETS = nets_with_work(sys.argv[1])
+
 pads = collections.defaultdict(list)
+skipped_done = 0
 for fp in board.Footprints():
     for p in fp.Pads():
         if p.GetNetname(): pads[p.GetNetname()].append(p)
+for name in list(pads):
+    if TODO_NETS is not None and name not in TODO_NETS:
+        del pads[name]; skipped_done += 1
+if skipped_done:
+    print(f"  {skipped_done} nets already connected, left alone")
 
 def escape(pad):
     """A via clear of the package, reached by a stub from the pad.

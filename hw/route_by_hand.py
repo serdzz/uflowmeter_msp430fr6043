@@ -38,6 +38,14 @@ ROUTES = [
  ('CH0',      [(36.25,21.56,F),(36.25,2.00,F),(36.25,2.00,B),
                (20.00,2.00,B),(20.00,2.00,F),(20.00,5.00,F)]),
  ('CH0',      [(36.25,21.56,F),(36.75,21.56,F)]),
+ # CH1 the same way, and for the same reason. Left to the routers it came out twice: the two pins
+ # were tied at the package AND each ran its own way to J4 -- 59 mm of copper and four vias where
+ # one path does. J4.3 is approached from the side, because coming straight down x=20 crosses the
+ # ground pin above it.
+ ('CH1',      [(39.75,21.56,F),(39.25,21.56,F)]),
+ ('CH1',      [(39.25,21.56,F),(39.25,15.00,F),(39.25,15.00,B),
+               (24.00,15.00,B),(24.00,15.00,F),(24.00,10.08,F),
+               (24.00,10.08,B),(20.00,10.08,B)]),
  ('I2C_SCL',  [(37.75,30.44,F),(37.75,32.50,F),(37.75,32.50,B),
                (22.50,32.50,B),(22.50,32.50,F),(22.50,3.00,F),(22.50,3.00,B),
                (42.92,3.00,B),(42.92,3.00,F),(42.92,6.00,F)]),
