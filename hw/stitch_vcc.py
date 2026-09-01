@@ -37,7 +37,9 @@ for fp in list(board.Footprints()):
         p = pad.GetPosition()
         placed = False
         for dist in (0.75, 1.0, 1.3):
-            for ang in range(0, 360, 30):
+            # Multiples of 45 only. At 30 degree steps the stub from pad to via lands off the
+            # 0/45/90 grid, which is the one thing tracks are not allowed to do.
+            for ang in range(0, 360, 45):
                 a = math.radians(ang)
                 pt = VECTOR2I(int(p.x + MM(dist) * math.cos(a)), int(p.y + MM(dist) * math.sin(a)))
                 nm = pad.GetNetname()

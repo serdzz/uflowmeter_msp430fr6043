@@ -60,17 +60,17 @@ ROUTES = [
  # DISP_GATE and RADIO_CS leave adjacent pins, so their lanes are half a millimetre apart and a
  # via on either sits too close to the other's track. Fanning one out sideways is what gives both
  # of them room -- it is the standard escape for a fine-pitch package and it is why they jog.
- ('DISP_GATE',[(40.75,21.56,F),(40.75,18.50,F),(41.90,17.70,F),(41.90,14.00,F),
+ ('DISP_GATE',[(40.75,21.56,F),(40.75,18.85,F),(41.90,17.70,F),(41.90,14.00,F),
                (41.90,14.00,B),(50.49,14.00,B),(50.49,14.00,F),(50.49,33.00,F)]),
  ('DISP_GATE',[(50.49,33.00,F),(50.49,35.50,F),(50.49,35.50,B),(54.06,35.50,B),
                (54.06,35.50,F),(54.06,33.95,F)]),
  # BUTTON and I2C_SCL likewise: adjacent pins, so BUTTON fans out before it turns.
- ('BUTTON',   [(38.25,30.44,F),(38.25,31.60,F),(39.50,32.40,F),(39.50,34.50,F),
+ ('BUTTON',   [(38.25,30.44,F),(38.25,31.15,F),(39.50,32.40,F),(39.50,34.50,F),
                (39.50,34.50,B),(43.52,34.50,B),(43.52,34.50,F),(43.52,36.00,F)]),
  ('BUTTON',   [(43.52,34.50,B),(48.70,34.50,B),(48.70,34.50,F),(48.70,39.15,F)]),
  # UART_RX leaves the pin next to UART_TX, so it fans out too, and comes at J5 from the left --
  # a run straight down x=62 would cross the pin above it.
- ('UART_RX',  [(41.75,30.44,F),(41.75,31.60,F),(42.50,32.40,F),(42.50,46.50,F),
+ ('UART_RX',  [(41.75,30.44,F),(41.75,31.65,F),(42.50,32.40,F),(42.50,46.50,F),
                (42.50,46.50,B),(60.80,46.50,B),(60.80,46.50,F),(60.80,50.08,F),
                (60.80,50.08,B),(62.00,50.08,B)]),
  # RST is the pin next to TEST; same fan, then west along the bottom to the pull-up and its cap.
@@ -79,12 +79,14 @@ ROUTES = [
  ('RST',      [(16.50,28.40,F),(16.50,26.00,F)]),
  # The ultrasonic crystal pair, again adjacent pins. USSXTOUT fans west; USSXTIN carries on down
  # past it before turning, which keeps their vias a millimetre and a half apart.
- ('USSXTOUT', [(34.75,21.56,F),(34.75,20.90,F),(33.20,20.60,F),(33.20,20.60,B),
-               (32.02,20.60,B),(32.02,20.60,F),(32.02,19.50,F)]),
- ('USSXTOUT', [(32.02,20.60,B),(30.85,20.60,B),(30.85,20.60,F),(30.85,16.00,F)]),
- ('USSXTIN',  [(35.25,21.56,F),(35.25,19.00,F),(35.25,19.00,B),
-               (25.02,19.00,B),(25.02,19.00,F),(25.02,19.50,F)]),
- ('USSXTIN',  [(27.15,19.00,B),(27.15,19.00,F),(27.15,16.00,F)]),
+ # USSXTOUT stays on the top layer: Y2 and C9 are both surface mount and both a few millimetres
+ # away, so a via buys nothing. It reaches C9.1 from above, because a run along y=19.5 would go
+ # straight through C9's ground pad.
+ ('USSXTOUT', [(34.75,21.56,F),(34.75,18.00,F),(32.02,18.00,F),(32.02,19.50,F)]),
+ ('USSXTOUT', [(32.02,18.00,F),(32.02,17.17,F),(30.85,16.00,F)]),
+ ('USSXTIN',  [(35.25,21.56,F),(35.25,17.60,F),(35.25,17.60,B),
+               (25.02,17.60,B),(25.02,17.60,F),(25.02,19.50,F)]),
+ ('USSXTIN',  [(27.15,17.60,B),(27.15,17.60,F),(27.15,16.00,F)]),
  # Routing boxes a 12 mm2 patch of ground in above U1, between DISP_GATE, RADIO_CS and the PVCC
  # decoupling. It holds a ground pad, so island removal keeps it, and on the top layer alone it
  # touches nothing else -- one via ties it to the plane and the board is whole.

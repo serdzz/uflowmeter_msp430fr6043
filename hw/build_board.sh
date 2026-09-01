@@ -17,6 +17,8 @@ $K route_maze.py  "$B" fat
 for i in 1 2 3 4; do $K route_cleanup.py "$B" || continue; break; done
 $K route_escape.py  "$B"
 for i in 1 2 3 4; do $K route_cleanup.py "$B" || continue; break; done
+$K mitre_corners.py "$B"
+for i in 1 2 3 4; do $K route_cleanup.py "$B" || continue; break; done
 $K finish_board.py  "$B"
 ./make_fab.sh
 kicad-cli pcb drc --output /tmp/build_drc.json --format json --severity-error "$B" \
