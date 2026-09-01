@@ -72,10 +72,22 @@ if missing or extra:
 print("  placement and BOM name the same parts")
 PY
 
+# Drop any paste layer with nothing on it. Every part is on the top, so the bottom paste gerber
+# comes out as a bare header -- and a fab house asked for a stencil of nothing quite reasonably
+# asks what you meant.
+for f in "$OUT"/*.gtp "$OUT"/*.gbp; do
+  [ -f "$f" ] || continue
+  if ! grep -qE 'D0[13]\*' "$f"; then
+    echo "  no apertures on $(basename "$f") -- not shipping it"
+    rm -f "$f"
+  fi
+done
+
 # KiCad names the Gerbers by layer -- .gtl .gbl .g1 .g2 .gts .gbs .gto .gbo .gm1 .gtp .gbp --
 # not .gbr, so a wildcard on .gbr silently ships an archive with only the drill files in it.
 ( cd "$OUT" && zip -q uflowmeter-jlcpcb.zip \
-    *.gtl *.gbl *.g1 *.g2 *.gts *.gbs *.gto *.gbo *.gm1 *.gtp *.gbp *.drl )
+    *.gtl *.gbl *.g1 *.g2 *.gts *.gbs *.gto *.gbo *.gm1 *.gtp *.drl 2>/dev/null \
+  || zip -q uflowmeter-jlcpcb.zip *.gtl *.gbl *.g1 *.g2 *.gts *.gbs *.gto *.gbo *.gm1 *.drl )
 # The schematic as a PDF, so the folder is a complete handover and not just machine files.
 kicad-cli sch export pdf --output "$OUT/uflowmeter-schematic.pdf" uflowmeter.kicad_sch >/dev/null
 kicad-cli sch erc --output "$OUT/erc.json" --format json --severity-error uflowmeter.kicad_sch \

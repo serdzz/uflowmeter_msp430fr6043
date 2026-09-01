@@ -78,13 +78,17 @@ are through-hole and normally hand-soldered anyway; the button's footprint is a 
 on four pads, and JLCPCB stocks 4.5 × 4.5 mm parts that will not sit on it. Pick a stocked switch at
 order time and the footprint can be swapped to match.
 
-Two things that will otherwise be found by the assembly house rather than by you, and which
-`make_fab.sh` now checks before writing anything:
+Three things that will otherwise be found by the assembly house rather than by you, and which
+`make_fab.sh` now handles before writing anything:
 
 * **Fiducials must not appear in the placement file.** They are copper marks, not parts, and a house
   that is asked to place FID1 will write and ask what it is.
 * **Every designator in the placement file needs a line in the BOM.** `BT1` lost its line when the
   BOM was rewritten for the radio module, and nothing noticed until the order was uploaded.
+* **A paste layer with nothing on it does not belong in the archive.** Every part on this board is
+  on the top, so the bottom paste gerber comes out as a bare header — and a house asked to make a
+  stencil of nothing quite reasonably asks what you meant. Any paste layer with no apertures is now
+  dropped.
 
 ## Cost
 
