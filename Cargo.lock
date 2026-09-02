@@ -102,6 +102,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor"
 version = "0.10.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "cordyceps",
  "critical-section",
@@ -115,6 +116,7 @@ dependencies = [
 [[package]]
 name = "embassy-executor-macros"
 version = "0.8.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -125,14 +127,17 @@ dependencies = [
 [[package]]
 name = "embassy-executor-timer-queue"
 version = "0.1.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 
 [[package]]
 name = "embassy-futures"
 version = "0.1.2"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 
 [[package]]
 name = "embassy-hal-internal"
 version = "0.5.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "num-traits",
 ]
@@ -140,6 +145,7 @@ dependencies = [
 [[package]]
 name = "embassy-msp430"
 version = "0.1.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "critical-section",
  "document-features",
@@ -161,6 +167,7 @@ dependencies = [
 [[package]]
 name = "embassy-sync"
 version = "0.8.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -174,6 +181,7 @@ dependencies = [
 [[package]]
 name = "embassy-time"
 version = "0.5.1"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "cfg-if",
  "critical-section",
@@ -188,6 +196,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-driver"
 version = "0.2.2"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "document-features",
 ]
@@ -195,6 +204,7 @@ dependencies = [
 [[package]]
 name = "embassy-time-queue-utils"
 version = "0.3.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "embassy-executor-timer-queue",
  "heapless",
@@ -391,6 +401,7 @@ dependencies = [
 [[package]]
 name = "msp430fr5043"
 version = "0.1.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "critical-section",
  "msp430",
@@ -401,6 +412,7 @@ dependencies = [
 [[package]]
 name = "msp430fr6043"
 version = "0.1.0"
+source = "git+https://github.com/serdzz/embassy?branch=dev%2Fmsp430#8af65ff3d433a48b21361a8e1e86c30daa5f6fb1"
 dependencies = [
  "critical-section",
  "msp430",

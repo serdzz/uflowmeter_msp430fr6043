@@ -18,11 +18,11 @@ msp430fr5043 = ["embassy-msp430/msp430fr5043"]
 msp430fr6043 = ["embassy-msp430/msp430fr6043"]
 
 [dependencies]
-embassy-msp430 = { path = "../embassy/embassy-msp430", default-features = false, features = ["time-driver-tb0"] }
-embassy-executor = { path = "../embassy/embassy-executor", features = ["platform-msp430", "executor-thread"] }
-embassy-time = { path = "../embassy/embassy-time", features = ["tick-hz-32_768"] }
-embassy-sync = { path = "../embassy/embassy-sync" }
-embassy-futures = { path = "../embassy/embassy-futures" }
+embassy-msp430 = { git = "https://github.com/serdzz/embassy", branch = "dev/msp430", default-features = false, features = ["time-driver-tb0"] }
+embassy-executor = { git = "https://github.com/serdzz/embassy", branch = "dev/msp430", features = ["platform-msp430", "executor-thread"] }
+embassy-time = { git = "https://github.com/serdzz/embassy", branch = "dev/msp430", features = ["tick-hz-32_768"] }
+embassy-sync = { git = "https://github.com/serdzz/embassy", branch = "dev/msp430" }
+embassy-futures = { git = "https://github.com/serdzz/embassy", branch = "dev/msp430" }
 
 msp430-rt = "0.4.1"
 panic-msp430 = "0.4.0"
